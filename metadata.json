@@ -1,0 +1,6 @@
+{
+  "name": "LemWriter Mobile",
+  "description": "Escritura ministerial para el Ministerio Apostólico LemGil con soporte de dictado y gestión de proyectos",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
