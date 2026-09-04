@@ -1,15 +1,25 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 export function useDictado(onResult: (text: string) => void, onStop?: () => void) {
   const [dictando, setDictando] = useState(false);
   const [modoExtendido, setModoExtendido] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const onResultRef = useRef(onResult);
+  const onStopRef = useRef(onStop);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
+
+  useEffect(() => {
+    onStopRef.current = onStop;
+  }, [onStop]);
 
   function iniciarReconocimiento(extendido = false) {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast.error('Navegador no soporta dictado');
+      toast.error('El navegador no soporta el grabador de voz');
       return;
     }
 
@@ -23,7 +33,7 @@ export function useDictado(onResult: (text: string) => void, onStop?: () => void
         .slice(e.resultIndex)
         .map((r: any) => r[0].transcript)
         .join(' ');
-      onResult(nuevasPalabras);
+      onResultRef.current?.(nuevasPalabras);
     };
 
     rec.onend = () => {
@@ -34,7 +44,7 @@ export function useDictado(onResult: (text: string) => void, onStop?: () => void
       } else {
         setDictando(false);
         setModoExtendido(false);
-        if (onStop) onStop();
+        onStopRef.current?.();
       }
     };
 

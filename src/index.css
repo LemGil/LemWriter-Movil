@@ -1,111 +1,378 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Ministerial Palette */
+  --gold: #C9A24A;
+  --gold-light: #E2C275;
+  --gold-dark: #9A7727;
+  --gold-glow: rgba(201, 162, 74, 0.25);
+  --gold-border: rgba(201, 162, 74, 0.4);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Petroleum & Slate Backgrounds */
+  --bg-main: #1A3A4A;
+  --bg-card: #1E3D4F;
+  --bg-surface: #152E3B;
+  --bg-input: #142B37;
+  --border-subtle: rgba(201, 162, 74, 0.18);
+  --border-muted: #2E4B5E;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Typography & Accents */
+  --ivory: #F5F1E8;
+  --text-muted: #9BB0BD;
+  --text-dim: #647B89;
+  --red-rec: #E5484D;
+  --green-saved: #30A46C;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Typography Stacks */
+  --font-cinzel: 'Cinzel', Georgia, serif;
+  --font-crimson: 'Crimson Pro', Georgia, serif;
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--ivory);
+  font-family: var(--font-inter);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 #root {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+  background-color: var(--bg-main);
+  position: relative;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A485A;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-dark);
+}
+
+::selection {
+  background: rgba(201, 162, 74, 0.35);
+  color: #FFFFFF;
+}
+
+/* Animations */
+@keyframes pulse-gold {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(201, 162, 74, 0.4));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 24px rgba(201, 162, 74, 0.85));
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
   }
 }
-p {
-  margin: 0;
+
+@keyframes anim-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.anim-up {
+  animation: anim-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-pulse-gold {
+  animation: pulse-gold 2.4s infinite ease-in-out;
+}
+
+.anim-dot-pulse {
+  animation: pulse-dot 1.2s infinite ease-in-out;
+}
+
+.anim-spin {
+  animation: spin 0.85s linear infinite;
+}
+
+.slide-up-sheet {
+  animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Tiptap Editor & ProseMirror */
+.tiptap-container {
+  width: 100%;
+  height: 100%;
+  cursor: text;
+}
+
+.tiptap-container .ProseMirror {
+  outline: none;
+  min-height: 280px;
+  font-family: var(--font-crimson);
+  font-size: 19px;
+  line-height: 1.8;
+  color: var(--ivory);
+  letter-spacing: 0.2px;
+}
+
+.tiptap-container .ProseMirror p {
+  margin-bottom: 1.2em;
+}
+
+.tiptap-container .ProseMirror h1 {
+  font-family: var(--font-cinzel);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  line-height: 1.3;
+}
+
+.tiptap-container .ProseMirror h2 {
+  font-family: var(--font-cinzel);
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.35;
+}
+
+.tiptap-container .ProseMirror blockquote {
+  border-left: 3px solid var(--gold);
+  padding-left: 16px;
+  margin: 1.2em 0;
+  font-style: italic;
+  color: #D3E0E8;
+  background: rgba(201, 162, 74, 0.05);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-radius: 0 6px 6px 0;
+}
+
+.tiptap-container .ProseMirror ul,
+.tiptap-container .ProseMirror ol {
+  padding-left: 24px;
+  margin-bottom: 1.2em;
+}
+
+.tiptap-container .ProseMirror li {
+  margin-bottom: 0.4em;
+}
+
+.tiptap-container .ProseMirror strong {
+  color: #FFF;
+  font-weight: 600;
+}
+
+.tiptap-container .ProseMirror em {
+  font-style: italic;
+  color: #E8E2D5;
+}
+
+/* Tiptap Placeholder */
+.tiptap-container .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-dim);
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+  font-family: var(--font-crimson);
+  font-size: 19px;
+}
+
+/* ========================================================
+   TEMAS DE LECTURA Y ESCRITURA (NOCTURNO, DIURNO, SEPIA)
+   ======================================================== */
+
+/* MODO DIURNO / DÍA (Luz Solar / Lectura Clara) */
+.tiptap-container.tiptap-theme-diurno {
+  background-color: #FAF8F5 !important;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror {
+  color: #1A242B;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror h1 {
+  color: #8C6819;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror h2 {
+  color: #1E3D4F;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote {
+  border-left: 3px solid #C9A24A;
+  color: #2D3E4C;
+  background: #F0ECE1;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror strong {
+  color: #0F171C;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror em {
+  color: #384853;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror p.is-editor-empty:first-child::before {
+  color: #8E9EA7;
+}
+
+/* MODO SEPIA / PERGAMINO (Clásico / Manuscrito Cálido) */
+.tiptap-container.tiptap-theme-sepia {
+  background-color: #F4EBD9 !important;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror {
+  color: #2C2218;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror h1 {
+  color: #7E5718;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror h2 {
+  color: #4A3319;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote {
+  border-left: 3px solid #B88B2A;
+  color: #4A3A28;
+  background: #EADFC8;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror strong {
+  color: #181109;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror em {
+  color: #57442F;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror p.is-editor-empty:first-child::before {
+  color: #9C886B;
+}
+
+/* MODO NOCTURNO / NOCHE (Petróleo Ministerial / Púlpito) */
+.tiptap-container.tiptap-theme-nocturno {
+  background-color: #1A3A4A !important;
+}
+.tiptap-container.tiptap-theme-nocturno .ProseMirror {
+  color: var(--ivory);
+}
+
+/* Estilos de contenido HTML en el Modo Lectura */
+.contenido-lectura p {
+  margin-bottom: 1.2em;
+}
+.contenido-lectura h1 {
+  font-family: var(--font-cinzel);
+  font-size: 1.4em;
+  font-weight: 700;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  line-height: 1.3;
+}
+.contenido-lectura h2 {
+  font-family: var(--font-cinzel);
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.35;
+}
+.contenido-lectura blockquote {
+  border-left: 3px solid #C9A24A;
+  padding-left: 16px;
+  margin: 1.2em 0;
+  font-style: italic;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-radius: 0 6px 6px 0;
+}
+.contenido-lectura ul,
+.contenido-lectura ol {
+  padding-left: 24px;
+  margin-bottom: 1.2em;
+}
+.contenido-lectura li {
+  margin-bottom: 0.4em;
+}
+.contenido-lectura.tema-nocturno blockquote {
+  background: rgba(201, 162, 74, 0.08);
+  color: #D3E0E8;
+}
+.contenido-lectura.tema-diurno blockquote {
+  background: #F0ECE1;
+  color: #2D3E4C;
+}
+.contenido-lectura.tema-sepia blockquote {
+  background: #EADFC8;
+  color: #4A3A28;
+}
+
+/* Form inputs & buttons */
+input, select, textarea, button {
+  font-family: inherit;
+}
+
