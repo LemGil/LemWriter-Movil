@@ -32,6 +32,7 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sugerencias, setSugerencias] = useState<TituloSugerido[]>([])
+  const [esRespuestaCache, setEsRespuestaCache] = useState(false)
   const [tonoSeleccionado, setTonoSeleccionado] = useState('Apostólico y Ministerial')
   const [alcance, setAlcance] = useState<'todo' | 'seccion'>('todo')
   const [tituloEditando, setTituloEditando] = useState('')
@@ -53,8 +54,8 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
       .join('\n\n')
   }
 
-  // Generar títulos usando la API de Gemini del servidor
-  const generarTitulos = async () => {
+  // Generar títulos usando la API de Gemini del servidor (con soporte de caché rápida)
+  const generarTitulos = async (forzarRefresco = false) => {
     const rawContent = obtenerContenidoAnalisis()
     const plainText = rawContent
       .replace(/<[^>]*>/g, ' ')
@@ -66,6 +67,7 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
         'El proyecto aún no contiene suficiente texto escrito para que la IA extraiga ideas clave. Escribe o dicta al menos unos párrafos y vuelve a intentarlo.'
       )
       setSugerencias([])
+      setEsRespuestaCache(false)
       return
     }
 
@@ -84,6 +86,7 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
           currentTitle: currentTitle || 'Sin título',
           type: projectType,
           tone: tonoSeleccionado,
+          forceRefresh: forzarRefresco,
         }),
       })
 
@@ -92,6 +95,8 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
       if (!response.ok) {
         throw new Error(data.error || 'Error al conectar con el servicio de IA.')
       }
+
+      setEsRespuestaCache(!!data.cached)
 
       if (data.suggestions && data.suggestions.length > 0) {
         setSugerencias(data.suggestions)
@@ -384,9 +389,9 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
             </div>
 
             <button
-              onClick={generarTitulos}
+              onClick={() => generarTitulos(true)}
               disabled={cargando}
-              title="Volver a generar sugerencias con IA"
+              title="Volver a generar sugerencias con IA (fuerza consulta a Gemini)"
               style={{
                 background: 'linear-gradient(135deg, rgba(201, 162, 74, 0.25) 0%, rgba(20, 43, 55, 0.9) 100%)',
                 border: '1px solid #C9A24A',
@@ -420,6 +425,48 @@ export const SugerirTitulosModal: React.FC<SugerirTitulosModalProps> = ({
             gap: '12px',
           }}
         >
+          {/* Indicador de entrega desde caché del servidor */}
+          {esRespuestaCache && !cargando && sugerencias.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(74, 224, 152, 0.1)',
+                border: '1px solid rgba(74, 224, 152, 0.3)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                color: '#4AE098',
+                flexWrap: 'wrap',
+                gap: '6px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚡</span>
+                <span>
+                  <strong>Caché ultra-rápida:</strong> respuesta instantánea servida desde el backend (&lt;5ms).
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => generarTitulos(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#DFBE72',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  textDecoration: 'underline',
+                  padding: 0,
+                  fontWeight: 600,
+                }}
+              >
+                Generar variaciones nuevas
+              </button>
+            </div>
+          )}
+
           {cargando ? (
             /* Estado de Carga con Animación */
             <div

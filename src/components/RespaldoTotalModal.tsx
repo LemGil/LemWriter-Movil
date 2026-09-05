@@ -11,6 +11,11 @@ import {
   exportarCopiaSeguridadJSON,
   restaurarCopiaSeguridadJSON
 } from '../utils/exportarTodosPDF'
+import {
+  getStorageQuotaInfo,
+  requestPersistentStorage,
+  StorageQuotaInfo
+} from '../lib/offlineStore'
 
 interface RespaldoTotalModalProps {
   onClose: () => void
@@ -39,20 +44,26 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
   const [progresoZIP, setProgresoZIP] = useState(0)
   const [procesandoJSON, setProcesandoJSON] = useState(false)
   const [restaurando, setRestaurando] = useState(false)
+  const [storageInfo, setStorageInfo] = useState<StorageQuotaInfo | null>(null)
+  const [solicitandoPersistencia, setSolicitandoPersistencia] = useState(false)
 
   const inputFileRef = useRef<HTMLInputElement>(null)
 
-  // Cargar todos los proyectos y secciones al abrir el modal
+  // Cargar todos los proyectos, secciones e información de almacenamiento al abrir el modal
   useEffect(() => {
     let montado = true
     async function cargar() {
       setCargando(true)
       try {
-        const datos = await cargarTodosLosProyectosConSecciones((c, t) => {
-          if (montado) setProgresoCarga({ actual: c, total: t })
-        })
+        const [datos, info] = await Promise.all([
+          cargarTodosLosProyectosConSecciones((c, t) => {
+            if (montado) setProgresoCarga({ actual: c, total: t })
+          }),
+          getStorageQuotaInfo()
+        ])
         if (montado) {
           setItems(datos)
+          setStorageInfo(info)
         }
       } catch (e) {
         console.error('Error cargando proyectos para respaldo:', e)
@@ -66,6 +77,29 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
       montado = false
     }
   }, [])
+
+  async function handleSolicitarPersistencia() {
+    setSolicitandoPersistencia(true)
+    try {
+      const concedido = await requestPersistentStorage()
+      const updatedInfo = await getStorageQuotaInfo()
+      setStorageInfo(updatedInfo)
+      if (concedido) {
+        toast.success('Protección persistente activada: el navegador no borrará tus datos', {
+          icon: '🛡️',
+          duration: 4000
+        })
+      } else {
+        toast('El navegador gestiona la retención automáticamente.', {
+          icon: 'ℹ️'
+        })
+      }
+    } catch {
+      toast.error('No se pudo modificar la persistencia')
+    } finally {
+      setSolicitandoPersistencia(false)
+    }
+  }
 
   const opcionesActuales: OpcionesCompendio = {
     tamanoLetra,
@@ -711,6 +745,110 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
                     💾 <strong>Copia de Seguridad Integral de Datos:</strong> Genera un archivo
                     seguro con todos tus textos, títulos, borradores y secciones para restaurarlos
                     fácilmente si formateas o cambias de dispositivo.
+                  </div>
+
+                  {/* Panel Informativo de Motor IndexedDB y Capacidad */}
+                  <div
+                    style={{
+                      background: 'rgba(16, 36, 47, 0.85)',
+                      border: '1px solid rgba(201, 162, 74, 0.3)',
+                      borderRadius: '10px',
+                      padding: '13px 15px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '8px',
+                        flexWrap: 'wrap',
+                        gap: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <span style={{ fontSize: '15px' }}>⚡</span>
+                        <span
+                          style={{
+                            fontFamily: "'Cinzel', serif",
+                            fontWeight: 700,
+                            fontSize: '12.5px',
+                            color: '#DFBE72'
+                          }}
+                        >
+                          Motor de Almacenamiento Local
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          background: 'rgba(74, 224, 152, 0.15)',
+                          border: '1px solid rgba(74, 224, 152, 0.4)',
+                          color: '#4AE098',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        IndexedDB Activo
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '11.5px', color: '#9BB0BD', lineHeight: 1.5 }}>
+                      Capacidad ampliada sin la restricción tradicional de 5MB. Tus notas, sermones y secciones se conservan directamente en la base estructurada de este dispositivo.
+                    </div>
+
+                    {storageInfo && storageInfo.supported && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          paddingTop: '9px',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ fontSize: '11px', color: '#DFBE72' }}>
+                          Espacio usado: <strong>{storageInfo.usageMB > 0 ? `${storageInfo.usageMB} MB` : '< 1 MB'}</strong>
+                          {storageInfo.quotaMB > 0 && ` / ${storageInfo.quotaMB.toLocaleString()} MB disponibles`}
+                        </div>
+
+                        {storageInfo.isPersisted ? (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '10.5px',
+                              color: '#4AE098'
+                            }}
+                          >
+                            <span>🛡️</span>
+                            <span>Protegido contra limpieza automática</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={solicitandoPersistencia}
+                            onClick={handleSolicitarPersistencia}
+                            style={{
+                              padding: '3px 8px',
+                              background: 'rgba(201, 162, 74, 0.15)',
+                              border: '1px solid rgba(201, 162, 74, 0.4)',
+                              color: '#DFBE72',
+                              borderRadius: '4px',
+                              fontSize: '10.5px',
+                              cursor: solicitandoPersistencia ? 'wait' : 'pointer'
+                            }}
+                          >
+                            {solicitandoPersistencia ? 'Protegiendo...' : '🛡️ Activar Protección Persistente'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Sección Restaurar */}

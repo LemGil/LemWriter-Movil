@@ -14,11 +14,15 @@ import {
   generateLocalId,
   addPendingSyncAction,
   getPendingSyncQueue,
-  saveOrUpdateOfflineProject
+  saveOrUpdateOfflineProject,
+  getPendingConflicts,
+  saveConflict,
+  EditConflict
 } from '../lib/offlineStore'
 import { ExportarPDFModal } from './ExportarPDFModal'
 import { ModoLecturaModal, TemaLectura } from './ModoLecturaModal'
 import { SugerirTitulosModal } from './SugerirTitulosModal'
+import { ConflictoResolucionModal } from './ConflictoResolucionModal'
 
 export interface Seccion {
   id: string
@@ -81,6 +85,32 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
   const [modoLecturaAbierto, setModoLecturaAbierto] = useState(false)
   const [sugerirTitulosModalAbierto, setSugerirTitulosModalAbierto] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
+
+  // Estado de Conflictos de Edición
+  const [conflictoActivo, setConflictoActivo] = useState<EditConflict | null>(null)
+  const [conflictosProyecto, setConflictosProyecto] = useState<EditConflict[]>(() =>
+    getPendingConflicts().filter((c) => c.projectId === proyecto.id)
+  )
+
+  useEffect(() => {
+    const handleConflicts = () => {
+      setConflictosProyecto(getPendingConflicts().filter((c) => c.projectId === proyecto.id))
+    }
+
+    window.addEventListener('lw:conflicts-change', handleConflicts)
+    window.addEventListener('lw:conflict-detected', handleConflicts)
+    window.addEventListener('lw:conflict-resolved', handleConflicts)
+
+    return () => {
+      window.removeEventListener('lw:conflicts-change', handleConflicts)
+      window.removeEventListener('lw:conflict-detected', handleConflicts)
+      window.removeEventListener('lw:conflict-resolved', handleConflicts)
+    }
+  }, [proyecto.id])
+
+  const conflictoSeccionActual = seccionActiva
+    ? conflictosProyecto.find((c) => c.sectionId === seccionActiva.id && c.status === 'pending')
+    : undefined
 
   const togglePantallaCompleta = async () => {
     const proximo = !pantallaCompleta
@@ -292,29 +322,69 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
     if (!targetId) return
 
     setGuardando(true)
+    const nowIso = new Date().toISOString()
+    const targetSec = secciones.find((s) => s.id === targetId) || seccionActivaRef.current
 
     // 1. Guardar de forma INMEDIATA en almacenamiento local (nunca se pierde el texto)
     saveOfflineSectionContent(proyecto.id, targetId, html)
     setSecciones((prev) =>
-      prev.map((s) => (s.id === targetId ? { ...s, content: html } : s))
+      prev.map((s) => (s.id === targetId ? { ...s, content: html, updated_at: nowIso } : s))
     )
 
     const isOnline = typeof navigator !== 'undefined' && navigator.onLine
 
     if (isOnline && !targetId.startsWith('local_') && !proyecto.id.startsWith('local_')) {
       try {
+        // Pre-flight check: verificar si en la nube hubo cambios concurrentes desde otro dispositivo
+        const { data: remoteSec } = await supabase
+          .from('lw_secciones')
+          .select('id, title, content, updated_at')
+          .eq('id', targetId)
+          .single()
+
+        if (remoteSec && remoteSec.updated_at && targetSec?.updated_at) {
+          const remoteTime = new Date(remoteSec.updated_at).getTime()
+          const localBaseTime = new Date(targetSec.updated_at).getTime()
+
+          const cleanText = (str: string) =>
+            (str || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+          // Conflicto si el servidor fue actualizado con posterioridad a nuestra base y los textos son diferentes
+          if (remoteTime > localBaseTime && cleanText(remoteSec.content) !== cleanText(html)) {
+            const conflict: EditConflict = {
+              id: `conflict_${targetId}_${Date.now()}`,
+              projectId: proyecto.id,
+              projectTitle: proyecto.title,
+              sectionId: targetId,
+              sectionTitle: targetSec?.title || 'Sección',
+              localContent: html,
+              remoteContent: remoteSec.content,
+              localUpdatedAt: nowIso,
+              remoteUpdatedAt: remoteSec.updated_at,
+              baseUpdatedAt: targetSec.updated_at,
+              detectedAt: nowIso,
+              status: 'pending'
+            }
+
+            saveConflict(conflict)
+            setConflictoActivo(conflict)
+            setGuardando(false)
+            return
+          }
+        }
+
         const { error } = await supabase
           .from('lw_secciones')
           .update({
             content: html,
-            updated_at: new Date().toISOString()
+            updated_at: nowIso
           })
           .eq('id', targetId)
 
         // Actualizar fecha del proyecto
         await supabase
           .from('lw_proyectos')
-          .update({ updated_at: new Date().toISOString() })
+          .update({ updated_at: nowIso })
           .eq('id', proyecto.id)
 
         if (!error) {
@@ -328,7 +398,15 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
     }
 
     // Encolar acción para sincronización cuando regrese la conexión
-    addPendingSyncAction('UPDATE_SECTION', { id: targetId, content: html })
+    addPendingSyncAction('UPDATE_SECTION', {
+      id: targetId,
+      projectId: proyecto.id,
+      projectTitle: proyecto.title,
+      title: targetSec?.title,
+      content: html,
+      base_updated_at: targetSec?.updated_at,
+      client_updated_at: nowIso
+    })
     setGuardadoExitoso(true)
     setGuardando(false)
   }
@@ -1832,6 +1910,52 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
         </div>
       )}
 
+      {/* Banner de Alerta si la Sección Activa tiene Conflicto Pendiente */}
+      {conflictoSeccionActual && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg, #7C2D12 0%, #9A3412 50%, #7C2D12 100%)',
+            borderBottom: '1px solid #F97316',
+            color: '#FFF9E6',
+            padding: '10px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap',
+            zIndex: 40,
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
+            <div style={{ fontSize: '13px' }}>
+              <strong style={{ color: '#FDBA74' }}>Conflicto de edición detectado:</strong> Hay cambios diferentes guardados en la nube para esta sección.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setConflictoActivo(conflictoSeccionActual)}
+            style={{
+              background: '#F5F1E8',
+              border: '1px solid #FDBA74',
+              color: '#7C2D12',
+              padding: '5px 14px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>Comparar y Resolver</span>
+            <span>➔</span>
+          </button>
+        </div>
+      )}
+
       {/* Área del Editor Tiptap con click focus y tema dinámico (Diurno, Nocturno, Sepia) */}
       <div
         className={`tiptap-container tiptap-theme-${temaEditor}`}
@@ -3063,6 +3187,29 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Resolución de Conflicto de Edición */}
+      {conflictoActivo && (
+        <ConflictoResolucionModal
+          conflicto={conflictoActivo}
+          onClose={() => setConflictoActivo(null)}
+          onResolved={async (_res, newSecId) => {
+            setConflictoActivo(null)
+            const updated = getOfflineSections(proyecto.id) as Seccion[]
+            setSecciones(updated)
+            if (newSecId) {
+              const target = updated.find((s) => s.id === newSecId)
+              if (target) seleccionarSeccion(target)
+            } else {
+              const current = updated.find((s) => s.id === (seccionActiva?.id || conflictoActivo.sectionId))
+              if (current && editor?.commands) {
+                editor.commands.setContent(current.content || '')
+              }
+            }
+            setConflictosProyecto(getPendingConflicts().filter((c) => c.projectId === proyecto.id))
+          }}
+        />
       )}
     </div>
   )

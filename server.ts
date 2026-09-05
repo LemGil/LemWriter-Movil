@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { titleSuggestionsCache } from "./server/aiCache";
 
 const app = express();
 const PORT = 3000;
@@ -29,6 +30,25 @@ app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     hasApiKey: !!process.env.GEMINI_API_KEY,
+    cache: titleSuggestionsCache.getStats(),
+  });
+});
+
+// Endpoint para inspección y estadísticas de la caché de IA
+app.get("/api/ai/cache-stats", (_req, res) => {
+  res.json({
+    status: "ok",
+    stats: titleSuggestionsCache.getStats(),
+  });
+});
+
+// Endpoint para purgar la caché de IA manualmente
+app.post("/api/ai/cache-clear", (_req, res) => {
+  titleSuggestionsCache.clear();
+  res.json({
+    status: "ok",
+    message: "Caché de IA limpiada exitosamente.",
+    stats: titleSuggestionsCache.getStats(),
   });
 });
 
@@ -75,7 +95,13 @@ async function generateContentWithFallback(ai: GoogleGenAI, config: any, prompt:
 // Endpoint to generate project title suggestions
 app.post("/api/titles/suggest", async (req, res) => {
   try {
-    const { content, currentTitle, type = "Sermón", tone = "ministerial" } = req.body || {};
+    const {
+      content,
+      currentTitle,
+      type = "Sermón",
+      tone = "ministerial",
+      forceRefresh = false,
+    } = req.body || {};
 
     if (!content || typeof content !== "string" || content.trim().length < 5) {
       return res.status(400).json({
@@ -83,14 +109,39 @@ app.post("/api/titles/suggest", async (req, res) => {
       });
     }
 
-    const ai = getGeminiClient();
-
     // Clean HTML tags from content if present
     const plainText = content
       .replace(/<[^>]*>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 12000); // Send up to 12k chars for rich context
+
+    // Generar clave única de caché basada en el contenido analizado y sus parámetros
+    const cacheKey = titleSuggestionsCache.generateKey({
+      text: plainText,
+      currentTitle: (currentTitle || "").trim(),
+      type: type.trim(),
+      tone: tone.trim(),
+    });
+
+    // 1. Verificación de Caché (Respuesta instantánea <5ms sin consumo de tokens)
+    if (!forceRefresh) {
+      const cached = titleSuggestionsCache.get(cacheKey);
+      if (cached) {
+        res.setHeader("X-Cache", "HIT");
+        return res.json({
+          success: true,
+          cached: true,
+          cachedAt: new Date(cached.createdAt).toISOString(),
+          cacheHits: cached.hits,
+          suggestions: cached.data.suggestions || [],
+        });
+      }
+    }
+
+    res.setHeader("X-Cache", "MISS");
+
+    const ai = getGeminiClient();
 
     const prompt = `Analiza el siguiente texto de un sermón o estudio ministerial cristiano ("${type}") y genera entre 4 y 6 sugerencias de títulos impactantes, elocuentes, de profunda edificación espiritual y teológicamente sólidos.
 
@@ -158,10 +209,22 @@ Instrucciones para los títulos:
 
     const responseText = response.text || "{}";
     const parsedData = JSON.parse(responseText);
+    const suggestions = parsedData.suggestions || [];
+
+    // Guardar en la caché de alta velocidad (TTL 30 minutos)
+    if (suggestions.length > 0) {
+      titleSuggestionsCache.set(
+        cacheKey,
+        { suggestions },
+        30 * 60 * 1000,
+        currentTitle || plainText.slice(0, 60)
+      );
+    }
 
     res.json({
       success: true,
-      suggestions: parsedData.suggestions || [],
+      cached: false,
+      suggestions,
     });
   } catch (error: any) {
     console.error("Error generating title suggestions:", error);

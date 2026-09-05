@@ -9,9 +9,12 @@ import {
   deleteOfflineProject,
   generateLocalId,
   addPendingSyncAction,
-  saveOfflineSections
+  saveOfflineSections,
+  getPendingConflicts,
+  EditConflict
 } from '../lib/offlineStore'
 import { SwipeableProjectCard } from './SwipeableProjectCard'
+import { ConflictoResolucionModal } from './ConflictoResolucionModal'
 
 export interface Proyecto {
   id: string
@@ -86,12 +89,35 @@ export default function Proyectos({
   const [eliminarProyectoModal, setEliminarProyectoModal] = useState<Proyecto | null>(null)
   const [eliminandoProyecto, setEliminandoProyecto] = useState(false)
 
-  // Escuchar evento del FAB en App.tsx
+  // Estados para Conflictos de Edición
+  const [conflictos, setConflictos] = useState<EditConflict[]>(() => getPendingConflicts())
+  const [conflictoModal, setConflictoModal] = useState<EditConflict | null>(null)
+
+  // Escuchar evento del FAB en App.tsx y la inicialización de IndexedDB / Conflictos
   useEffect(() => {
     const handleNuevo = () => setModalAbierto(true)
+    const handleStorageReady = () => {
+      queryClient.invalidateQueries({ queryKey: ['proyectos'] })
+      setConflictos(getPendingConflicts())
+    }
+    const handleConflicts = () => {
+      setConflictos(getPendingConflicts())
+    }
+
     window.addEventListener('lw:nuevo-proyecto', handleNuevo)
-    return () => window.removeEventListener('lw:nuevo-proyecto', handleNuevo)
-  }, [])
+    window.addEventListener('lw:storage-ready', handleStorageReady)
+    window.addEventListener('lw:conflicts-change', handleConflicts)
+    window.addEventListener('lw:conflict-detected', handleConflicts)
+    window.addEventListener('lw:conflict-resolved', handleConflicts)
+
+    return () => {
+      window.removeEventListener('lw:nuevo-proyecto', handleNuevo)
+      window.removeEventListener('lw:storage-ready', handleStorageReady)
+      window.removeEventListener('lw:conflicts-change', handleConflicts)
+      window.removeEventListener('lw:conflict-detected', handleConflicts)
+      window.removeEventListener('lw:conflict-resolved', handleConflicts)
+    }
+  }, [queryClient])
 
   const { data: proyectos = [], isLoading: loading } = useQuery({
     queryKey: ['proyectos'],
@@ -476,6 +502,64 @@ export default function Proyectos({
           <span>Respaldo</span>
         </button>
       </div>
+
+      {/* Banner de Conflictos de Edición si existen */}
+      {conflictos.length > 0 && (
+        <div
+          onClick={() => setConflictoModal(conflictos[0])}
+          style={{
+            background: 'linear-gradient(135deg, rgba(124, 45, 18, 0.9) 0%, rgba(26, 58, 74, 0.85) 100%)',
+            border: '1px solid #DFBE72',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
+            transition: 'transform 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.01)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '22px', lineHeight: 1 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#FFF9E6', fontSize: '13px' }}>
+                {conflictos.length === 1
+                  ? 'Hay 1 conflicto de edición con la nube'
+                  : `Hay ${conflictos.length} conflictos de edición con la nube`}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#DFBE72', marginTop: '2px', lineHeight: 1.3 }}>
+                Se detectaron cambios simultáneos o sin conexión. Haz clic aquí para comparar y resolverlos.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: '#DFBE72',
+              color: '#122834',
+              fontWeight: 700,
+              fontSize: '11px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              fontFamily: "'Inter', sans-serif"
+            }}
+          >
+            Resolver
+          </button>
+        </div>
+      )}
 
       {/* Lista de Tarjetas con soporte Swipe-to-Delete */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1118,6 +1202,19 @@ export default function Proyectos({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Resolución de Conflicto de Edición */}
+      {conflictoModal && (
+        <ConflictoResolucionModal
+          conflicto={conflictoModal}
+          onClose={() => setConflictoModal(null)}
+          onResolved={() => {
+            setConflictoModal(null)
+            setConflictos(getPendingConflicts())
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] })
+          }}
+        />
       )}
     </div>
   )

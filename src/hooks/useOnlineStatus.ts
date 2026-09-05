@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   getPendingSyncQueue,
   processOfflineSyncQueue,
-  isOfflineGuestSession
+  isOfflineGuestSession,
+  getPendingConflicts,
+  EditConflict
 } from '../lib/offlineStore'
 import toast from 'react-hot-toast'
 
@@ -12,11 +14,16 @@ export function useOnlineStatus() {
   )
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [pendingCount, setPendingCount] = useState<number>(() => getPendingSyncQueue().length)
+  const [conflicts, setConflicts] = useState<EditConflict[]>(() => getPendingConflicts())
   const [isGuestMode, setIsGuestMode] = useState<boolean>(() => isOfflineGuestSession())
 
-  // Actualizar contador de pendientes
+  // Actualizar contador de pendientes y conflictos
   const refreshPendingCount = useCallback(() => {
     setPendingCount(getPendingSyncQueue().length)
+  }, [])
+
+  const refreshConflicts = useCallback(() => {
+    setConflicts(getPendingConflicts())
   }, [])
 
   // Disparar sincronización
@@ -26,6 +33,7 @@ export function useOnlineStatus() {
     try {
       const { syncedCount, errors } = await processOfflineSyncQueue()
       refreshPendingCount()
+      refreshConflicts()
       if (syncedCount > 0) {
         toast.success(`Sincronizados ${syncedCount} cambios con la nube`, {
           icon: '☁️',
@@ -40,7 +48,7 @@ export function useOnlineStatus() {
     } finally {
       setIsSyncing(false)
     }
-  }, [isSyncing, refreshPendingCount])
+  }, [isSyncing, refreshPendingCount, refreshConflicts])
 
   useEffect(() => {
     const handleOnline = () => {
@@ -58,11 +66,16 @@ export function useOnlineStatus() {
       refreshPendingCount()
     }
 
+    const handleConflictsChange = () => {
+      refreshConflicts()
+    }
+
     const handleSyncStatus = (e: any) => {
       if (e.detail?.syncing !== undefined) {
         setIsSyncing(e.detail.syncing)
       }
       refreshPendingCount()
+      refreshConflicts()
     }
 
     const handleSessionChange = () => {
@@ -72,6 +85,9 @@ export function useOnlineStatus() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     window.addEventListener('lw:pending-sync-change', handlePendingChange)
+    window.addEventListener('lw:conflicts-change', handleConflictsChange)
+    window.addEventListener('lw:conflict-detected', handleConflictsChange)
+    window.addEventListener('lw:conflict-resolved', handleConflictsChange)
     window.addEventListener('lw:sync-status', handleSyncStatus)
     window.addEventListener('lw:session-change', handleSessionChange)
 
@@ -84,16 +100,22 @@ export function useOnlineStatus() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('lw:pending-sync-change', handlePendingChange)
+      window.removeEventListener('lw:conflicts-change', handleConflictsChange)
+      window.removeEventListener('lw:conflict-detected', handleConflictsChange)
+      window.removeEventListener('lw:conflict-resolved', handleConflictsChange)
       window.removeEventListener('lw:sync-status', handleSyncStatus)
       window.removeEventListener('lw:session-change', handleSessionChange)
     }
-  }, [syncNow, refreshPendingCount])
+  }, [syncNow, refreshPendingCount, refreshConflicts])
 
   return {
     isOnline,
     isSyncing,
     pendingCount,
+    conflicts,
+    conflictsCount: conflicts.length,
     isGuestMode,
-    syncNow
+    syncNow,
+    refreshConflicts
   }
 }
