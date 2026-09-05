@@ -11,7 +11,6 @@ import {
   addPendingSyncAction,
   saveOfflineSections
 } from '../lib/offlineStore'
-import { AudioTranscribeModal } from './AudioTranscribeModal'
 import { SwipeableProjectCard } from './SwipeableProjectCard'
 
 export interface Proyecto {
@@ -75,7 +74,6 @@ export default function Proyectos({
 }: ProyectosProps) {
   const queryClient = useQueryClient()
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [transcripcionModalAbierto, setTranscripcionModalAbierto] = useState(false)
   const [nuevoTitulo, setNuevoTitulo] = useState('')
   const [nuevoTipo, setNuevoTipo] = useState('sermon')
   const [creando, setCreando] = useState(false)
@@ -94,88 +92,6 @@ export default function Proyectos({
     window.addEventListener('lw:nuevo-proyecto', handleNuevo)
     return () => window.removeEventListener('lw:nuevo-proyecto', handleNuevo)
   }, [])
-
-  async function handleCrearProyectoConTexto(titulo: string, tipo: string, contenido: string) {
-    const isOnline = typeof navigator !== 'undefined' && navigator.onLine
-    const tituloFinal = titulo.trim() || 'Mensaje de Voz'
-    const paragraphs = `<p>${contenido.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`
-
-    if (isOnline) {
-      try {
-        const { data: projData, error: projError } = await supabase
-          .from('lw_proyectos')
-          .insert([{ title: tituloFinal, type: tipo || 'sermon' }])
-          .select()
-          .single()
-
-        if (!projError && projData) {
-          const { error: secError } = await supabase
-            .from('lw_secciones')
-            .insert([
-              {
-                project_id: projData.id,
-                title: 'Transcripción',
-                order_index: 0,
-                content: paragraphs
-              }
-            ])
-
-          if (!secError) {
-            saveOrUpdateOfflineProject(projData)
-            saveOfflineSections(projData.id, [
-              {
-                id: 'sec_' + Date.now(),
-                project_id: projData.id,
-                title: 'Transcripción',
-                order_index: 0,
-                content: paragraphs
-              }
-            ])
-            toast.success('Proyecto creado con la transcripción')
-            queryClient.invalidateQueries({ queryKey: ['proyectos'] })
-            setTranscripcionModalAbierto(false)
-            onSelect(projData)
-            return
-          }
-        }
-      } catch (e) {
-        console.warn('Error creando proyecto online:', e)
-      }
-    }
-
-    // Modo Offline
-    const localProjId = generateLocalId('local_proj')
-    const localSecId = generateLocalId('local_sec')
-    const now = new Date().toISOString()
-
-    const nuevoProjOffline: Proyecto = {
-      id: localProjId,
-      title: tituloFinal,
-      type: tipo || 'sermon',
-      updated_at: now,
-      created_at: now,
-      _isOfflineOnly: true
-    }
-
-    const nuevaSecOffline = {
-      id: localSecId,
-      project_id: localProjId,
-      title: 'Transcripción',
-      order_index: 0,
-      content: paragraphs,
-      _isOfflineOnly: true
-    }
-
-    saveOrUpdateOfflineProject(nuevoProjOffline)
-    saveOfflineSections(localProjId, [nuevaSecOffline])
-    addPendingSyncAction('CREATE_PROJECT', nuevoProjOffline)
-    addPendingSyncAction('CREATE_SECTION', nuevaSecOffline)
-
-    toast.success('Proyecto creado con la transcripción (local)', { icon: '📡' })
-    queryClient.invalidateQueries({ queryKey: ['proyectos'] })
-    setTranscripcionModalAbierto(false)
-    onSelect(nuevoProjOffline)
-  }
 
   const { data: proyectos = [], isLoading: loading } = useQuery({
     queryKey: ['proyectos'],
@@ -487,7 +403,7 @@ export default function Proyectos({
       {/* 2. Línea de Acciones Rápidas (Barra de Botones Táctiles Espaciada) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1.2fr 1fr 1fr',
+        gridTemplateColumns: '1.2fr 1fr',
         gap: '8px',
         marginBottom: '14px'
       }}>
@@ -524,38 +440,6 @@ export default function Proyectos({
         >
           <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span>
           <span>Nuevo</span>
-        </button>
-
-        {/* Botón: Audio IA */}
-        <button
-          onClick={() => setTranscripcionModalAbierto(true)}
-          title="Grabar o subir audio para transcribir con Gemini 3.5 Transcribe"
-          style={{
-            background: 'linear-gradient(135deg, rgba(201, 162, 74, 0.18) 0%, rgba(30, 61, 79, 0.85) 100%)',
-            border: '1px solid #C9A24A',
-            color: '#FFE885',
-            fontSize: '11.5px',
-            fontWeight: 700,
-            padding: '9px 8px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '5px',
-            fontFamily: "'Cinzel', serif",
-            whiteSpace: 'nowrap',
-            transition: 'all 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(201, 162, 74, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 162, 74, 0.18) 0%, rgba(30, 61, 79, 0.85) 100%)'
-          }}
-        >
-          <span style={{ fontSize: '13px', lineHeight: 1 }}>🎙️</span>
-          <span>Audio IA</span>
         </button>
 
         {/* Botón: Respaldo */}
@@ -1234,14 +1118,6 @@ export default function Proyectos({
             </div>
           </div>
         </div>
-      )}
-      {/* Modal de Transcripción de Audio en Vista de Proyectos */}
-      {transcripcionModalAbierto && (
-        <AudioTranscribeModal
-          contexto="proyectos"
-          onClose={() => setTranscripcionModalAbierto(false)}
-          onCrearProyectoConTexto={handleCrearProyectoConTexto}
-        />
       )}
     </div>
   )

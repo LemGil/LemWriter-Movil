@@ -19,7 +19,6 @@ import {
 import { ExportarPDFModal } from './ExportarPDFModal'
 import { ModoLecturaModal, TemaLectura } from './ModoLecturaModal'
 import { SugerirTitulosModal } from './SugerirTitulosModal'
-import { AudioTranscribeModal } from './AudioTranscribeModal'
 
 export interface Seccion {
   id: string
@@ -81,7 +80,6 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
   })
   const [modoLecturaAbierto, setModoLecturaAbierto] = useState(false)
   const [sugerirTitulosModalAbierto, setSugerirTitulosModalAbierto] = useState(false)
-  const [audioTranscribeModalAbierto, setAudioTranscribeModalAbierto] = useState(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
 
   const togglePantallaCompleta = async () => {
@@ -490,81 +488,6 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
     setNuevaSeccionModal(false)
     setNuevaSeccionTitulo('')
     toast.success(`Sección "${tituloLimpio}" creada localmente`, { icon: '📡' })
-  }
-
-  async function handleCrearSeccionDirecta(titulo: string, contenidoHtml: string) {
-    const nuevoOrden = secciones.length
-    const tituloLimpio = titulo.trim() || 'Nueva Sección'
-    const isOnline = typeof navigator !== 'undefined' && navigator.onLine
-
-    if (isOnline && !proyecto.id.startsWith('local_')) {
-      try {
-        const { data, error } = await supabase
-          .from('lw_secciones')
-          .insert([
-            {
-              project_id: proyecto.id,
-              title: tituloLimpio,
-              order_index: nuevoOrden,
-              content: contenidoHtml
-            }
-          ])
-          .select()
-          .single()
-
-        if (!error && data) {
-          const nuevaLista = [...secciones, data as Seccion]
-          setSecciones(nuevaLista)
-          saveOfflineSections(proyecto.id, nuevaLista)
-          seleccionarSeccion(data as Seccion)
-          toast.success(`Sección "${data.title}" creada`)
-          return
-        }
-      } catch (err: any) {
-        console.warn('Fallo creación online de sección:', err)
-      }
-    }
-
-    const nuevaSecOffline: Seccion = {
-      id: generateLocalId('local_sec'),
-      project_id: proyecto.id,
-      title: tituloLimpio,
-      order_index: nuevoOrden,
-      content: contenidoHtml,
-      _isOfflineOnly: true
-    }
-
-    const nuevaLista = [...secciones, nuevaSecOffline]
-    setSecciones(nuevaLista)
-    saveOfflineSections(proyecto.id, nuevaLista)
-    addPendingSyncAction('CREATE_SECTION', nuevaSecOffline)
-    seleccionarSeccion(nuevaSecOffline)
-    toast.success(`Sección "${tituloLimpio}" creada localmente`, { icon: '📡' })
-  }
-
-  const handleInsertarTextoTranscrito = (texto: string) => {
-    if (editor?.commands) {
-      const currentHtml = editor.getHTML()
-      const isBlank = !currentHtml || currentHtml === '<p></p>'
-      const paragraphs = texto
-        .split('\n\n')
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-        .join('')
-
-      if (isBlank) {
-        editor.commands.setContent(paragraphs || `<p>${texto}</p>`)
-      } else {
-        editor.commands.insertContent(' ' + (paragraphs || texto))
-      }
-
-      const newHtml = editor.getHTML()
-      setGuardadoExitoso(false)
-      setGuardando(true)
-      clearTimeout(autoSaveRef.current)
-      autoSaveRef.current = setTimeout(() => guardar(newHtml), 1000)
-    }
   }
 
   async function handleGuardarRenombrar(e: React.FormEvent) {
@@ -984,10 +907,10 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
             </div>
           </div>
 
-          {/* LÍNEA 2: Herramientas de Creación e Inteligencia Artificial (3 Botones) */}
+          {/* LÍNEA 2: Herramientas de Creación y Estructura (2 Botones) */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1.15fr',
+            gridTemplateColumns: '1fr 1.15fr',
             gap: '6px',
             width: '100%'
           }}>
@@ -998,7 +921,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
               aria-label="Sugerir Títulos con IA"
               style={{
                 height: '31px',
-                padding: '0 6px',
+                padding: '0 8px',
                 background: 'linear-gradient(135deg, rgba(201, 162, 74, 0.22) 0%, rgba(20, 43, 55, 0.95) 100%)',
                 border: '1px solid rgba(201, 162, 74, 0.45)',
                 color: '#DFBE72',
@@ -1006,7 +929,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
+                gap: '5px',
                 cursor: 'pointer',
                 fontSize: '11px',
                 fontWeight: 700,
@@ -1028,49 +951,14 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
               <span>Títulos IA</span>
             </button>
 
-            {/* 2. Botón Transcribir Audio IA */}
-            <button
-              onClick={() => setAudioTranscribeModalAbierto(true)}
-              title="Transcribir Audio con el modelo Gemini 3.5 Transcribe"
-              aria-label="Transcribir Audio con IA"
-              style={{
-                height: '31px',
-                padding: '0 6px',
-                background: 'linear-gradient(135deg, rgba(201, 162, 74, 0.28) 0%, rgba(20, 43, 55, 0.95) 100%)',
-                border: '1px solid #C9A24A',
-                color: '#FFE885',
-                borderRadius: '7px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: "'Cinzel', serif",
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(201, 162, 74, 0.45)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(201, 162, 74, 0.28) 0%, rgba(20, 43, 55, 0.95) 100%)'
-              }}
-            >
-              <span style={{ fontSize: '12px', lineHeight: 1 }}>🎙️</span>
-              <span>Audio IA</span>
-            </button>
-
-            {/* 3. Botón Organizar Secciones */}
+            {/* 2. Botón Organizar Secciones */}
             <button
               onClick={() => setIndiceAbierto(true)}
               title="Organizar, mover de lugar y eliminar secciones del proyecto"
               aria-label="Organizar y reordenar secciones"
               style={{
                 height: '31px',
-                padding: '0 6px',
+                padding: '0 8px',
                 background: 'linear-gradient(135deg, rgba(201, 162, 74, 0.2) 0%, rgba(30, 61, 79, 0.9) 100%)',
                 border: '1px solid #C9A24A',
                 color: '#FFE885',
@@ -1078,7 +966,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
+                gap: '5px',
                 cursor: 'pointer',
                 fontSize: '11px',
                 fontWeight: 700,
@@ -1980,36 +1868,6 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           gap: '8px',
           zIndex: 20
         }}>
-          {/* Botón Transcribir con Gemini 3.5 Transcribe */}
-          <button
-            onClick={() => setAudioTranscribeModalAbierto(true)}
-            title="Grabar o subir audio para transcribir con Gemini 3.5 Transcribe"
-            aria-label="Transcribir con IA Gemini"
-            style={{
-              flex: 1.2,
-              padding: '11px 10px',
-              borderRadius: '10px',
-              border: '1px solid #DFBE72',
-              background: 'linear-gradient(135deg, #DFBE72 0%, #C9A24A 100%)',
-              color: '#122834',
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: '12px',
-              letterSpacing: '0.3px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(201, 162, 74, 0.35)',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <span style={{ fontSize: '15px' }}>✨🎙️</span>
-            <span>Transcribir (IA)</span>
-          </button>
-
           {/* Botón Grabador Dictado Web */}
           <button
             onClick={toggleDictado}
@@ -2996,18 +2854,6 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           projectType={proyectoActual.type}
           secciones={secciones}
           seccionActivaId={seccionActiva?.id}
-        />
-      )}
-
-      {/* Modal de Transcripción de Audio con Gemini 3.5 Transcribe */}
-      {audioTranscribeModalAbierto && (
-        <AudioTranscribeModal
-          contexto="editor"
-          onClose={() => setAudioTranscribeModalAbierto(false)}
-          onInsertText={handleInsertarTextoTranscrito}
-          onCrearNuevaSeccion={(titulo, contenido) => {
-            handleCrearSeccionDirecta(titulo, `<p>${contenido.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`)
-          }}
         />
       )}
 
