@@ -23,6 +23,8 @@ import { ExportarPDFModal } from './ExportarPDFModal'
 import { ModoLecturaModal, TemaLectura } from './ModoLecturaModal'
 import { SugerirTitulosModal } from './SugerirTitulosModal'
 import { ConflictoResolucionModal } from './ConflictoResolucionModal'
+import { buildObsidianExport } from '../services/exportObsidianService'
+import { writeObsidianFile } from '../services/obsidianFsService'
 
 export interface Seccion {
   id: string
@@ -387,6 +389,27 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           .update({ updated_at: nowIso })
           .eq('id', proyecto.id)
 
+        // ── Exportar a Obsidian en paralelo ──────────────────────────────────────
+        // Fire-and-forget: NO usar await. Si falla (disco desconectado, permiso
+        // revocado, vault no configurado) el autosave de Supabase no se ve afectado.
+        const seccionesActualizadas = secciones.map((s) =>
+          s.id === targetId ? { ...s, content: html, updated_at: nowIso } : s
+        )
+        const exportData = buildObsidianExport(
+          {
+            id: proyectoActual.id,
+            title: proyectoActual.title,
+            type: proyectoActual.type || 'sermon',
+            created_at: (proyectoActual as any).created_at || nowIso,
+            status: (proyectoActual as any).status || 'en_progreso'
+          },
+          seccionesActualizadas
+        )
+        if (exportData) {
+          writeObsidianFile(exportData.relativePath, exportData.content)
+            .catch(err => console.warn('[Obsidian Export]', err))
+        }
+
         if (!error) {
           setGuardadoExitoso(true)
           setGuardando(false)
@@ -395,6 +418,25 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
       } catch (e) {
         console.warn('Error guardando en Supabase, encolando offline:', e)
       }
+    }
+
+    // ── Exportar a Obsidian en paralelo también cuando se guarda offline ─────
+    const seccionesActualizadasOffline = secciones.map((s) =>
+      s.id === targetId ? { ...s, content: html, updated_at: nowIso } : s
+    )
+    const exportDataOffline = buildObsidianExport(
+      {
+        id: proyectoActual.id,
+        title: proyectoActual.title,
+        type: proyectoActual.type || 'sermon',
+        created_at: (proyectoActual as any).created_at || nowIso,
+        status: (proyectoActual as any).status || 'en_progreso'
+      },
+      seccionesActualizadasOffline
+    )
+    if (exportDataOffline) {
+      writeObsidianFile(exportDataOffline.relativePath, exportDataOffline.content)
+        .catch(err => console.warn('[Obsidian Export]', err))
     }
 
     // Encolar acción para sincronización cuando regrese la conexión

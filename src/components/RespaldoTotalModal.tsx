@@ -16,6 +16,7 @@ import {
   requestPersistentStorage,
   StorageQuotaInfo
 } from '../lib/offlineStore'
+import { ObsidianVaultSetup } from './settings/ObsidianVaultSetup'
 
 interface RespaldoTotalModalProps {
   onClose: () => void
@@ -29,7 +30,7 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
   const [cargando, setCargando] = useState(true)
   const [progresoCarga, setProgresoCarga] = useState({ actual: 0, total: 0 })
   const [items, setItems] = useState<ProyectoConSecciones[]>([])
-  const [opcionActiva, setOpcionActiva] = useState<'compendio' | 'zip' | 'backup'>('compendio')
+  const [opcionActiva, setOpcionActiva] = useState<'compendio' | 'zip' | 'backup' | 'obsidian'>('compendio')
 
   // Opciones de configuración de PDF
   const [tamanoLetra, setTamanoLetra] = useState<'normal' | 'grande' | 'pulpito'>('normal')
@@ -288,7 +289,7 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             background: '#122834',
             borderBottom: '1px solid rgba(201, 162, 74, 0.25)',
             padding: '4px 8px',
@@ -311,7 +312,7 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
               borderBottom: opcionActiva === 'compendio' ? '2px solid #C9A24A' : '2px solid transparent',
               borderRadius: '6px 6px 0 0',
               color: opcionActiva === 'compendio' ? '#DFBE72' : '#8E9EA7',
-              fontSize: '11.5px',
+              fontSize: '11px',
               fontWeight: 600,
               fontFamily: "'Inter', sans-serif",
               cursor: 'pointer',
@@ -341,7 +342,7 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
               borderBottom: opcionActiva === 'zip' ? '2px solid #C9A24A' : '2px solid transparent',
               borderRadius: '6px 6px 0 0',
               color: opcionActiva === 'zip' ? '#DFBE72' : '#8E9EA7',
-              fontSize: '11.5px',
+              fontSize: '11px',
               fontWeight: 600,
               fontFamily: "'Inter', sans-serif",
               cursor: 'pointer',
@@ -371,7 +372,7 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
               borderBottom: opcionActiva === 'backup' ? '2px solid #C9A24A' : '2px solid transparent',
               borderRadius: '6px 6px 0 0',
               color: opcionActiva === 'backup' ? '#DFBE72' : '#8E9EA7',
-              fontSize: '11.5px',
+              fontSize: '11px',
               fontWeight: 600,
               fontFamily: "'Inter', sans-serif",
               cursor: 'pointer',
@@ -383,6 +384,36 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
           >
             <span>💾</span>
             <span>Datos JSON</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpcionActiva('obsidian')
+              setMostrarPreview(false)
+            }}
+            style={{
+              padding: '8px 4px',
+              background:
+                opcionActiva === 'obsidian'
+                  ? 'linear-gradient(135deg, rgba(201, 162, 74, 0.25) 0%, rgba(30, 61, 79, 0.8) 100%)'
+                  : 'transparent',
+              border: 'none',
+              borderBottom: opcionActiva === 'obsidian' ? '2px solid #C9A24A' : '2px solid transparent',
+              borderRadius: '6px 6px 0 0',
+              color: opcionActiva === 'obsidian' ? '#DFBE72' : '#8E9EA7',
+              fontSize: '11px',
+              fontWeight: 600,
+              fontFamily: "'Inter', sans-serif",
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '2px'
+            }}
+          >
+            <span>🔮</span>
+            <span>Obsidian</span>
           </button>
         </div>
 
@@ -902,6 +933,29 @@ export const RespaldoTotalModal: React.FC<RespaldoTotalModalProps> = ({
                       {restaurando ? 'Restaurando datos...' : 'Seleccionar Archivo de Respaldo'}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* OPCIÓN 4: OBSIDIAN VAULT */}
+              {opcionActiva === 'obsidian' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div
+                    style={{
+                      background: 'rgba(201, 162, 74, 0.1)',
+                      border: '1px solid rgba(201, 162, 74, 0.3)',
+                      borderRadius: '8px',
+                      padding: '12px 14px',
+                      fontSize: '12px',
+                      color: '#DFBE72',
+                      lineHeight: 1.45
+                    }}
+                  >
+                    🔮 <strong>Bóveda Ministerial de Obsidian:</strong> Sincronización automática
+                    local hacia tu vault. Cada vez que editas y se ejecuta el autoguardado, LemWriter genera y actualiza
+                    los archivos <code>.md</code> estructurados en carpetas por categoría (<code>sermones/</code>, <code>ensenanzas/</code>, <code>devocionales/</code>, etc.).
+                  </div>
+
+                  <ObsidianVaultSetup />
                 </div>
               )}
             </>
