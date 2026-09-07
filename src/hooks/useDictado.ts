@@ -174,13 +174,28 @@ export function useDictado(
       };
 
       rec.onerror = (e: any) => {
-        console.warn('Web Speech API aviso:', e?.error);
-        if (e.error === 'not-allowed') {
-          toast.error('Acceso al micrófono denegado en el navegador.');
+        const error = e.error || e.message || 'desconocido';
+
+        if (error === 'network') {
+          toast.error('El dictado requiere conexión a internet en el navegador. Usa la app móvil para dictar sin conexión.', { duration: 5000 });
           detenerGrabacion();
-        } else if (e.error !== 'no-speech') {
-          console.error('Error Web Speech:', e.error);
+          return;
         }
+
+        if (error === 'not-allowed' || error === 'permission-denied') {
+          toast.error('Permiso de micrófono denegado. Actívalo en la configuración del navegador.');
+          detenerGrabacion();
+          return;
+        }
+
+        if (error === 'no-speech') {
+          // Silencio — no mostrar error, es normal
+          return;
+        }
+
+        // Cualquier otro error
+        toast.error(`Error de dictado: ${error}`);
+        detenerGrabacion();
       };
 
       rec.onend = () => {
