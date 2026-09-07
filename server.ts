@@ -54,8 +54,8 @@ app.post("/api/ai/cache-clear", (_req, res) => {
 
 // Helper to generate content with fallback models and retry on 503/429/temporary errors
 async function generateContentWithFallback(ai: GoogleGenAI, config: any, prompt: string) {
-  // Use active, valid models: 2.5-flash, 3.7-flash, and 3.5-flash-lite
-  const models = ["gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.5-flash-lite"];
+  // Use active, valid models: 3.8-flash, 3.7-flash, and 3.5-flash-lite
+  const models = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash-lite"];
   let lastError: any = null;
 
   for (const model of models) {
@@ -243,6 +243,144 @@ Instrucciones para los títulos:
 
     res.status(500).json({
       error: errorMessage,
+    });
+  }
+});
+
+// Endpoint para transcripción de audio con Gemini (soporta Dictado y Sermón Extendido)
+app.post("/api/audio/transcribe", async (req, res) => {
+  try {
+    const { audio, mimeType = "audio/webm", mode = "dictado", promptHint } = req.body || {};
+
+    if (!audio || typeof audio !== "string") {
+      return res.status(400).json({
+        error: "Se requiere el contenido de audio codificado en Base64.",
+      });
+    }
+
+    // Limpiar prefijo data URL si viene presente
+    const base64Data = audio.replace(/^data:audio\/[a-zA-Z0-9.-]+;base64,/, "").trim();
+
+    if (!base64Data) {
+      return res.status(400).json({
+        error: "El archivo de audio está vacío o corrupto.",
+      });
+    }
+
+    // Si el audio es insignificante o silencioso (< 300 caracteres base64), responder vacío de inmediato
+    if (base64Data.length < 300) {
+      return res.json({
+        success: true,
+        text: "",
+        mode,
+      });
+    }
+
+    const ai = getGeminiClient();
+
+    // Instrucción para el transcriptor ministerial
+    const systemInstruction =
+      "Eres un transcriptor ministerial y teológico de excelencia para el Ministerio Apostólico LemGil. Tu labor es transcribir con máxima exactitud y fidelidad las palabras grabadas en español.";
+
+    let prompt =
+      mode === "extendido"
+        ? `Transcribe con máxima fidelidad este sermón, prédica o estudio bíblico grabado en audio.
+Instrucciones obligatorias:
+1. Transcribe exactamente lo hablado en español con ortografía impecable y puntuación natural.
+2. Agrupa el texto en párrafos fluidos y legibles acordes a las pausas y temas del orador.
+3. Si el orador menciona versículos o pasajes bíblicos (por ejemplo "San Juan capítulo tres versículo dieciséis"), escríbelos en su formato estándar (ejemplo: "Juan 3:16").
+4. Respeta las mayúsculas de reverencia cuando se refiera a Dios, Jesús, Cristo, Espíritu Santo, Padre Celestial.
+5. Devuelve ÚNICAMENTE el texto transcrito directo, sin saludos iniciales, sin etiquetas [Música], sin comentarios explicativos ni formato markdown redundante.`
+        : `Transcribe con máxima fidelidad este dictado de voz ministerial.
+Instrucciones obligatorias:
+1. Transcribe exactamente las palabras dichas en español con puntuación natural.
+2. Si se mencionan citas o libros bíblicos, escríbelos en formato estándar (ej: "Romanos 8:28").
+3. Devuelve ÚNICAMENTE las palabras transcritas, sin preámbulos, sin comillas envolventes ni notas adicionales.`;
+
+    if (promptHint && typeof promptHint === "string" && promptHint.trim().length > 0) {
+      prompt += `\nContexto o tema del mensaje: "${promptHint.slice(0, 300)}"`;
+    }
+
+    // Normalizar MIME type eliminando parámetros de codecs
+    const cleanMimeType = (mimeType || "audio/webm").split(";")[0].trim();
+
+    const audioPart = {
+      inlineData: {
+        mimeType: cleanMimeType,
+        data: base64Data,
+      },
+    };
+
+    // Modelos para transcripción de audio
+    const transcribeModels = ["gemini-3.5-transcribe", "gemini-3.8-flash", "gemini-3.7-flash"];
+    let transcriptionText = "";
+    let lastError: any = null;
+
+    for (const model of transcribeModels) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+          }
+
+          const response = await ai.models.generateContent({
+            model,
+            contents: [audioPart, prompt],
+            config: {
+              systemInstruction,
+            },
+          });
+
+          // Extraer texto
+          if (response.text && response.text.trim().length > 0) {
+            transcriptionText = response.text.trim();
+          } else if (response.candidates?.[0]?.content?.parts) {
+            const partsText = response.candidates[0].content.parts
+              .map((p: any) => p.text || "")
+              .join("")
+              .trim();
+            transcriptionText = partsText;
+          }
+          // Si la respuesta fue exitosa sin lanzar error, terminar el ciclo
+          break;
+        } catch (err: any) {
+          lastError = err;
+          const errMsg = err?.message || "";
+          console.warn(`Attempt ${attempt + 1} transcription with ${model} failed:`, errMsg);
+          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+            break;
+          }
+        }
+      }
+
+      if (lastError === null || transcriptionText.length > 0) {
+        break;
+      }
+    }
+
+    if (!transcriptionText && lastError) {
+      throw lastError;
+    }
+
+    res.json({
+      success: true,
+      text: transcriptionText,
+      mode,
+    });
+  } catch (error: any) {
+    console.error("Error al transcribir audio:", error);
+    const rawError = error?.message || "";
+    let userMsg = "Error al procesar la transcripción del audio.";
+    if (rawError.includes("GEMINI_API_KEY")) {
+      userMsg = "Clave de Gemini API no configurada en el servidor.";
+    } else if (rawError.includes("429") || rawError.includes("RESOURCE_EXHAUSTED")) {
+      userMsg = "Servicio de transcripción ocupado momentáneamente. Intenta nuevamente.";
+    } else if (rawError) {
+      userMsg = rawError;
+    }
+
+    res.status(500).json({
+      error: userMsg,
     });
   }
 });

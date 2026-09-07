@@ -271,18 +271,42 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
     }
   }, [editor, seccionActiva?.id, seccionActiva?.content])
 
-  // Hook de reconocimiento de voz / dictado
-  const { dictando, modoExtendido, toggleDictado, toggleExtendido } = useDictado(
+  const formatearTiempo = (segundos: number): string => {
+    const mins = Math.floor(segundos / 60)
+    const segs = segundos % 60
+    return `${mins.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`
+  }
+
+  // Hook de reconocimiento de voz / dictado y grabación ministerial
+  const {
+    dictando,
+    modoExtendido,
+    transcribiendo,
+    tiempoGrabacion,
+    audioLevel,
+    toggleDictado,
+    toggleExtendido
+  } = useDictado(
     (palabras) => {
-      if (editor?.commands) {
-        editor.commands.insertContent(' ' + palabras)
-        const html = editor.getHTML()
-        setGuardadoExitoso(false)
-        setGuardando(true)
-        clearTimeout(autoSaveRef.current)
-        autoSaveRef.current = setTimeout(() => guardar(html), 1000)
+      if (editor) {
+        if (!editor.isFocused) {
+          editor.commands.focus()
+        }
+        const textoLimpio = palabras.trim()
+        if (textoLimpio.length > 0) {
+          const editorTexto = editor.getText().trim()
+          const aInsertar = editorTexto.length === 0 ? textoLimpio : ' ' + textoLimpio
+          editor.commands.insertContent(aInsertar)
+          const html = editor.getHTML()
+          setGuardadoExitoso(false)
+          setGuardando(true)
+          clearTimeout(autoSaveRef.current)
+          autoSaveRef.current = setTimeout(() => guardar(html), 1000)
+        }
       }
-    }
+    },
+    undefined,
+    proyecto.title + (seccionActiva ? ' - ' + seccionActiva.title : '')
   )
 
   useEffect(() => {
@@ -977,16 +1001,31 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                {dictando ? (
+                {transcribiendo ? (
+                  <span style={{ color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                    <span
+                      className="anim-spin"
+                      style={{
+                        width: '9px',
+                        height: '9px',
+                        border: '1.5px solid rgba(56, 189, 248, 0.3)',
+                        borderTopColor: '#38BDF8',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                      }}
+                    />
+                    Transcribiendo con IA...
+                  </span>
+                ) : dictando ? (
                   modoExtendido ? (
-                    <span style={{ color: '#FF6B6B', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                    <span style={{ color: '#FF6B6B', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
                       <span className="anim-dot-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FF4444', display: 'inline-block' }} />
-                      Grabando sermón...
+                      Sermón ({formatearTiempo(tiempoGrabacion)})
                     </span>
                   ) : (
-                    <span style={{ color: '#DFBE72', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                    <span style={{ color: '#DFBE72', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
                       <span className="anim-dot-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A24A', display: 'inline-block' }} />
-                      Grabando audio...
+                      Dictando ({formatearTiempo(tiempoGrabacion)})
                     </span>
                   )
                 ) : (guardando || !guardadoExitoso) ? (
@@ -1446,25 +1485,39 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
             <button
               type="button"
               onClick={toggleDictado}
-              title={dictando ? 'Detener grabador de voz' : 'Iniciar grabador de voz'}
+              disabled={transcribiendo}
+              title={
+                transcribiendo
+                  ? 'Transcribiendo audio...'
+                  : dictando
+                  ? `Detener grabador (${formatearTiempo(tiempoGrabacion)})`
+                  : 'Iniciar dictado de voz'
+              }
               style={{
-                background: dictando ? '#E5484D' : 'rgba(30, 61, 79, 0.85)',
-                border: '1px solid ' + (dictando ? '#FF8588' : 'rgba(201, 162, 74, 0.4)'),
-                color: dictando ? '#FFFFFF' : '#DFBE72',
-                padding: '3px 7px',
+                background: transcribiendo
+                  ? '#173646'
+                  : dictando
+                  ? '#E5484D'
+                  : 'rgba(30, 61, 79, 0.85)',
+                border: '1px solid ' + (transcribiendo ? '#38BDF8' : dictando ? '#FF8588' : 'rgba(201, 162, 74, 0.4)'),
+                color: transcribiendo ? '#38BDF8' : dictando ? '#FFFFFF' : '#DFBE72',
+                padding: '3px 8px',
                 borderRadius: '6px',
-                cursor: 'pointer',
+                cursor: transcribiendo ? 'wait' : 'pointer',
                 fontSize: '11px',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
                 height: '26px',
-                boxShadow: dictando ? '0 0 10px rgba(229, 72, 77, 0.5)' : 'none'
+                boxShadow: dictando ? '0 0 10px rgba(229, 72, 77, 0.5)' : 'none',
+                opacity: transcribiendo ? 0.8 : 1
               }}
             >
-              <span>{dictando ? '⏹' : '🎤'}</span>
-              <span className="hidden sm:inline">{dictando ? 'Detener' : 'Grabador'}</span>
+              <span>{transcribiendo ? '⏳' : dictando ? '⏹' : '🎤'}</span>
+              <span className="hidden sm:inline">
+                {transcribiendo ? 'Transcribiendo...' : dictando ? `Detener (${formatearTiempo(tiempoGrabacion)})` : 'Grabador'}
+              </span>
             </button>
 
             {/* Tema Rápido */}
@@ -2447,103 +2500,197 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           paddingLeft: '12px',
           paddingRight: '12px',
           paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-          background: 'rgba(30, 61, 79, 0.96)',
-          backdropFilter: 'blur(8px)',
-          borderTop: '1px solid rgba(201, 162, 74, 0.3)',
+          background: 'rgba(30, 61, 79, 0.98)',
+          backdropFilter: 'blur(10px)',
+          borderTop: '1px solid rgba(201, 162, 74, 0.35)',
           display: 'flex',
-          gap: '8px',
+          flexDirection: 'column',
+          gap: '6px',
           zIndex: 20
         }}>
-          {/* Botón Grabador Dictado Web */}
-          <button
-            onClick={toggleDictado}
-            title={dictando && !modoExtendido ? "Detener dictado" : "Dictado directo al cursor"}
-            aria-label="Dictado en vivo"
-            style={{
-              flex: 1,
-              padding: '11px 8px',
-              borderRadius: '10px',
-              border: 'none',
-              background: dictando && !modoExtendido
-                ? '#E5484D'
-                : 'linear-gradient(135deg, #24495C 0%, #173646 100%)',
-              color: dictando && !modoExtendido ? '#FFFFFF' : '#DFBE72',
-              borderWidth: '1px',
-              borderStyle: 'solid',
-              borderColor: dictando && !modoExtendido ? '#FF8588' : 'rgba(201, 162, 74, 0.3)',
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: '11.5px',
-              letterSpacing: '0.3px',
-              cursor: 'pointer',
+          {/* Indicador de estado en vivo cuando está grabando o transcribiendo */}
+          {(dictando || transcribiendo) && (
+            <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxShadow: dictando && !modoExtendido
-                ? '0 0 14px rgba(229, 72, 77, 0.5)'
-                : '0 2px 6px rgba(0,0,0,0.2)',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {dictando && !modoExtendido ? (
-              <>
-                <span className="anim-dot-pulse" style={{ fontSize: '14px' }}>⏹</span>
-                <span>Detener</span>
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: '14px' }}>🎤</span>
-                <span>Dictado</span>
-              </>
-            )}
-          </button>
+              justifyContent: 'space-between',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              background: transcribiendo
+                ? 'rgba(56, 189, 248, 0.12)'
+                : modoExtendido
+                ? 'rgba(229, 72, 77, 0.15)'
+                : 'rgba(201, 162, 74, 0.15)',
+              border: `1px solid ${
+                transcribiendo
+                  ? 'rgba(56, 189, 248, 0.3)'
+                  : modoExtendido
+                  ? 'rgba(229, 72, 77, 0.3)'
+                  : 'rgba(201, 162, 74, 0.3)'
+              }`,
+              fontSize: '11px',
+              fontWeight: 600,
+              fontFamily: "'Inter', sans-serif"
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {transcribiendo ? (
+                  <>
+                    <span
+                      className="anim-spin"
+                      style={{
+                        width: '10px',
+                        height: '10px',
+                        border: '1.5px solid rgba(56, 189, 248, 0.3)',
+                        borderTopColor: '#38BDF8',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                      }}
+                    />
+                    <span style={{ color: '#38BDF8' }}>
+                      Transcribiendo sermón con IA Gemini...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className="anim-dot-pulse"
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: modoExtendido ? '#FF4444' : '#DFBE72',
+                        display: 'inline-block'
+                      }}
+                    />
+                    <span style={{ color: modoExtendido ? '#FF8588' : '#DFBE72' }}>
+                      {modoExtendido ? 'Grabación continua de sermón' : 'Dictado en vivo ministerial'}: {formatearTiempo(tiempoGrabacion)}
+                    </span>
+                  </>
+                )}
+              </div>
 
-          {/* Botón Grabar Sermón Extendido */}
-          <button
-            onClick={toggleExtendido}
-            title={dictando && modoExtendido ? "Detener sermón continuo" : "Dictado continuo de sermón"}
-            aria-label="Dictado extendido"
-            style={{
-              flex: 1,
-              padding: '11px 8px',
-              borderRadius: '10px',
-              border: dictando && modoExtendido
-                ? '1px solid #FF8588'
-                : '1px solid rgba(201, 162, 74, 0.25)',
-              background: dictando && modoExtendido
-                ? '#E5484D'
-                : 'linear-gradient(135deg, #1A3745 0%, #102632 100%)',
-              color: '#F5F1E8',
-              fontFamily: "'Cinzel', serif",
-              fontWeight: 700,
-              fontSize: '11.5px',
-              letterSpacing: '0.3px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxShadow: dictando && modoExtendido
-                ? '0 0 14px rgba(229, 72, 77, 0.5)'
-                : '0 2px 6px rgba(0,0,0,0.2)',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {dictando && modoExtendido ? (
-              <>
-                <span className="anim-dot-pulse" style={{ fontSize: '14px' }}>⏹</span>
-                <span>Detener</span>
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: '14px' }}>🔊</span>
-                <span>Extendido</span>
-              </>
-            )}
-          </button>
+              {/* Indicador visual de nivel de micrófono */}
+              {dictando && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }} title="Nivel de entrada de micrófono">
+                  <span style={{ fontSize: '9px', color: '#8E9EA7', marginRight: '2px' }}>MIC</span>
+                  {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, idx) => {
+                    const active = (audioLevel / 100) >= threshold || (dictando && idx === 0)
+                    return (
+                      <span
+                        key={idx}
+                        style={{
+                          width: '3px',
+                          height: `${6 + idx * 2}px`,
+                          borderRadius: '1px',
+                          background: active
+                            ? (modoExtendido ? '#FF6B6B' : '#4AE098')
+                            : 'rgba(255, 255, 255, 0.2)',
+                          transition: 'background-color 0.1s ease'
+                        }}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Botón Grabador Dictado Web */}
+            <button
+              onClick={toggleDictado}
+              disabled={transcribiendo}
+              title={dictando && !modoExtendido ? "Detener dictado" : "Dictado directo al cursor"}
+              aria-label="Dictado en vivo"
+              style={{
+                flex: 1,
+                padding: '11px 8px',
+                borderRadius: '10px',
+                border: 'none',
+                background: dictando && !modoExtendido
+                  ? '#E5484D'
+                  : 'linear-gradient(135deg, #24495C 0%, #173646 100%)',
+                color: dictando && !modoExtendido ? '#FFFFFF' : '#DFBE72',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: dictando && !modoExtendido ? '#FF8588' : 'rgba(201, 162, 74, 0.3)',
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: '11.5px',
+                letterSpacing: '0.3px',
+                cursor: transcribiendo ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: dictando && !modoExtendido
+                  ? '0 0 14px rgba(229, 72, 77, 0.5)'
+                  : '0 2px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                opacity: transcribiendo ? 0.6 : 1
+              }}
+            >
+              {dictando && !modoExtendido ? (
+                <>
+                  <span className="anim-dot-pulse" style={{ fontSize: '14px' }}>⏹</span>
+                  <span>Detener ({formatearTiempo(tiempoGrabacion)})</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: '14px' }}>🎤</span>
+                  <span>Dictado</span>
+                </>
+              )}
+            </button>
+
+            {/* Botón Grabar Sermón Extendido */}
+            <button
+              onClick={toggleExtendido}
+              disabled={transcribiendo}
+              title={dictando && modoExtendido ? "Detener sermón continuo" : "Dictado continuo de sermón"}
+              aria-label="Dictado extendido"
+              style={{
+                flex: 1,
+                padding: '11px 8px',
+                borderRadius: '10px',
+                border: dictando && modoExtendido
+                  ? '1px solid #FF8588'
+                  : '1px solid rgba(201, 162, 74, 0.25)',
+                background: dictando && modoExtendido
+                  ? '#E5484D'
+                  : 'linear-gradient(135deg, #1A3745 0%, #102632 100%)',
+                color: '#F5F1E8',
+                fontFamily: "'Cinzel', serif",
+                fontWeight: 700,
+                fontSize: '11.5px',
+                letterSpacing: '0.3px',
+                cursor: transcribiendo ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: dictando && modoExtendido
+                  ? '0 0 14px rgba(229, 72, 77, 0.5)'
+                  : '0 2px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                opacity: transcribiendo ? 0.6 : 1
+              }}
+            >
+              {dictando && modoExtendido ? (
+                <>
+                  <span className="anim-dot-pulse" style={{ fontSize: '14px' }}>⏹</span>
+                  <span>Detener Sermón ({formatearTiempo(tiempoGrabacion)})</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: '14px' }}>🔊</span>
+                  <span>Extendido</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
