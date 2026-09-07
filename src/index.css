@@ -209,6 +209,39 @@ body {
   line-height: 1.35;
 }
 
+.tiptap-container .ProseMirror h3 {
+  font-family: var(--font-cinzel);
+  font-size: 18px;
+  font-weight: 600;
+  color: #DFBE72;
+  margin-top: 0.9em;
+  margin-bottom: 0.4em;
+  line-height: 1.4;
+}
+
+.tiptap-container .ProseMirror h4 {
+  font-family: var(--font-cinzel);
+  font-size: 16px;
+  font-weight: 600;
+  color: #B4C6D1;
+  margin-top: 0.8em;
+  margin-bottom: 0.3em;
+  line-height: 1.4;
+  letter-spacing: 0.3px;
+}
+
+.tiptap-container .ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(201, 162, 74, 0.3);
+  margin: 1.6em 0;
+}
+
+.tiptap-container .ProseMirror u {
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+}
+
 .tiptap-container .ProseMirror blockquote {
   border-left: 3px solid var(--gold);
   padding-left: 16px;
@@ -216,9 +249,99 @@ body {
   font-style: italic;
   color: #D3E0E8;
   background: rgba(201, 162, 74, 0.05);
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   border-radius: 0 6px 6px 0;
+}
+
+/* Callouts Ministeriales en el Editor */
+.tiptap-container .ProseMirror blockquote.callout,
+.tiptap-container .ProseMirror blockquote[data-callout-type] {
+  padding: 10px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 1.4em 0;
+  position: relative;
+  font-style: normal;
+}
+
+/* 📖 Pasaje Bíblico */
+.tiptap-container .ProseMirror blockquote.callout-biblia,
+.tiptap-container .ProseMirror blockquote[data-callout-type="biblia"] {
+  border-left: 4px solid #DFBE72;
+  background: rgba(201, 162, 74, 0.12);
+  color: #F8F3E6;
+}
+.tiptap-container .ProseMirror blockquote.callout-biblia::before,
+.tiptap-container .ProseMirror blockquote[data-callout-type="biblia"]::before {
+  content: '📖 PASAJE BÍBLICO';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #DFBE72;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+/* 💡 Idea / Pensamiento */
+.tiptap-container .ProseMirror blockquote.callout-idea,
+.tiptap-container .ProseMirror blockquote[data-callout-type="idea"] {
+  border-left: 4px solid #38BDF8;
+  background: rgba(56, 189, 248, 0.10);
+  color: #E0F2FE;
+}
+.tiptap-container .ProseMirror blockquote.callout-idea::before,
+.tiptap-container .ProseMirror blockquote[data-callout-type="idea"]::before {
+  content: '💡 IDEA / ILUSTRACIÓN';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #38BDF8;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+/* 🎯 Aplicación Práctica */
+.tiptap-container .ProseMirror blockquote.callout-aplicacion,
+.tiptap-container .ProseMirror blockquote[data-callout-type="aplicacion"] {
+  border-left: 4px solid #34D399;
+  background: rgba(52, 211, 153, 0.10);
+  color: #ECFDF5;
+}
+.tiptap-container .ProseMirror blockquote.callout-aplicacion::before,
+.tiptap-container .ProseMirror blockquote[data-callout-type="aplicacion"]::before {
+  content: '🎯 APLICACIÓN PRÁCTICA';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #34D399;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+/* 📌 Nota Ministerial / Púlpito */
+.tiptap-container .ProseMirror blockquote.callout-nota,
+.tiptap-container .ProseMirror blockquote[data-callout-type="nota"] {
+  border-left: 4px solid #F472B6;
+  background: rgba(244, 114, 182, 0.10);
+  color: #FDF2F8;
+}
+.tiptap-container .ProseMirror blockquote.callout-nota::before,
+.tiptap-container .ProseMirror blockquote[data-callout-type="nota"]::before {
+  content: '📌 NOTA MINISTERIAL';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #F472B6;
+  margin-bottom: 6px;
+  user-select: none;
 }
 
 .tiptap-container .ProseMirror ul,
@@ -270,10 +393,59 @@ body {
 .tiptap-container.tiptap-theme-diurno .ProseMirror h2 {
   color: #1E3D4F;
 }
+.tiptap-container.tiptap-theme-diurno .ProseMirror h3 {
+  color: #8C6819;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror h4 {
+  color: #385161;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror hr {
+  border-top-color: rgba(140, 104, 25, 0.25);
+}
 .tiptap-container.tiptap-theme-diurno .ProseMirror blockquote {
   border-left: 3px solid #C9A24A;
   color: #2D3E4C;
   background: #F0ECE1;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-biblia,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="biblia"] {
+  border-left-color: #B3861B;
+  background: #F8F3E8;
+  color: #3A2B14;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-biblia::before,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="biblia"]::before {
+  color: #8C6819;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-idea,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="idea"] {
+  border-left-color: #0284C7;
+  background: #F0F9FF;
+  color: #0C4A6E;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-idea::before,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="idea"]::before {
+  color: #0284C7;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-aplicacion,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="aplicacion"] {
+  border-left-color: #059669;
+  background: #F0FDF4;
+  color: #064E3B;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-aplicacion::before,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="aplicacion"]::before {
+  color: #059669;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-nota,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="nota"] {
+  border-left-color: #DB2777;
+  background: #FDF2F8;
+  color: #831843;
+}
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote.callout-nota::before,
+.tiptap-container.tiptap-theme-diurno .ProseMirror blockquote[data-callout-type="nota"]::before {
+  color: #DB2777;
 }
 .tiptap-container.tiptap-theme-diurno .ProseMirror strong {
   color: #0F171C;
@@ -298,10 +470,59 @@ body {
 .tiptap-container.tiptap-theme-sepia .ProseMirror h2 {
   color: #4A3319;
 }
+.tiptap-container.tiptap-theme-sepia .ProseMirror h3 {
+  color: #6D4C1B;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror h4 {
+  color: #4A3521;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror hr {
+  border-top-color: rgba(126, 87, 24, 0.25);
+}
 .tiptap-container.tiptap-theme-sepia .ProseMirror blockquote {
   border-left: 3px solid #B88B2A;
   color: #4A3A28;
   background: #EADFC8;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-biblia,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="biblia"] {
+  border-left-color: #9C7221;
+  background: #EFE4CD;
+  color: #38250E;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-biblia::before,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="biblia"]::before {
+  color: #7E5718;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-idea,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="idea"] {
+  border-left-color: #0369A1;
+  background: #E6F1F7;
+  color: #082F49;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-idea::before,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="idea"]::before {
+  color: #0369A1;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-aplicacion,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="aplicacion"] {
+  border-left-color: #047857;
+  background: #E7F3EC;
+  color: #064E3B;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-aplicacion::before,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="aplicacion"]::before {
+  color: #047857;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-nota,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="nota"] {
+  border-left-color: #BE185D;
+  background: #F6E6EE;
+  color: #701A75;
+}
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote.callout-nota::before,
+.tiptap-container.tiptap-theme-sepia .ProseMirror blockquote[data-callout-type="nota"]::before {
+  color: #BE185D;
 }
 .tiptap-container.tiptap-theme-sepia .ProseMirror strong {
   color: #181109;
@@ -341,14 +562,128 @@ body {
   margin-bottom: 0.5em;
   line-height: 1.35;
 }
+.contenido-lectura h3 {
+  font-family: var(--font-cinzel);
+  font-size: 1.15em;
+  font-weight: 600;
+  margin-top: 0.9em;
+  margin-bottom: 0.4em;
+  line-height: 1.4;
+  color: #DFBE72;
+}
+.contenido-lectura.tema-diurno h3 {
+  color: #8C6819;
+}
+.contenido-lectura.tema-sepia h3 {
+  color: #6D4C1B;
+}
+.contenido-lectura h4 {
+  font-family: var(--font-cinzel);
+  font-size: 1.05em;
+  font-weight: 600;
+  margin-top: 0.8em;
+  margin-bottom: 0.3em;
+  line-height: 1.4;
+  color: #9BB0BD;
+}
+.contenido-lectura.tema-diurno h4 {
+  color: #385161;
+}
+.contenido-lectura.tema-sepia h4 {
+  color: #4A3521;
+}
+.contenido-lectura hr {
+  border: none;
+  border-top: 1px solid rgba(201, 162, 74, 0.3);
+  margin: 1.6em 0;
+}
+.contenido-lectura.tema-diurno hr {
+  border-top-color: rgba(140, 104, 25, 0.25);
+}
+.contenido-lectura.tema-sepia hr {
+  border-top-color: rgba(126, 87, 24, 0.25);
+}
+.contenido-lectura u {
+  text-decoration: underline;
+  text-decoration-color: #C9A24A;
+  text-underline-offset: 3px;
+}
 .contenido-lectura blockquote {
   border-left: 3px solid #C9A24A;
   padding-left: 16px;
   margin: 1.2em 0;
   font-style: italic;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   border-radius: 0 6px 6px 0;
+}
+.contenido-lectura blockquote.callout,
+.contenido-lectura blockquote[data-callout-type] {
+  padding: 12px 18px;
+  border-radius: 0 8px 8px 0;
+  margin: 1.4em 0;
+  font-style: normal;
+}
+/* Callouts en Modo Lectura */
+.contenido-lectura blockquote.callout-biblia,
+.contenido-lectura blockquote[data-callout-type="biblia"] {
+  border-left: 4px solid #DFBE72;
+}
+.contenido-lectura blockquote.callout-biblia::before,
+.contenido-lectura blockquote[data-callout-type="biblia"]::before {
+  content: '📖 PASAJE BÍBLICO';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #DFBE72;
+  margin-bottom: 6px;
+}
+.contenido-lectura blockquote.callout-idea,
+.contenido-lectura blockquote[data-callout-type="idea"] {
+  border-left: 4px solid #38BDF8;
+}
+.contenido-lectura blockquote.callout-idea::before,
+.contenido-lectura blockquote[data-callout-type="idea"]::before {
+  content: '💡 IDEA / ILUSTRACIÓN';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #38BDF8;
+  margin-bottom: 6px;
+}
+.contenido-lectura blockquote.callout-aplicacion,
+.contenido-lectura blockquote[data-callout-type="aplicacion"] {
+  border-left: 4px solid #34D399;
+}
+.contenido-lectura blockquote.callout-aplicacion::before,
+.contenido-lectura blockquote[data-callout-type="aplicacion"]::before {
+  content: '🎯 APLICACIÓN PRÁCTICA';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #34D399;
+  margin-bottom: 6px;
+}
+.contenido-lectura blockquote.callout-nota,
+.contenido-lectura blockquote[data-callout-type="nota"] {
+  border-left: 4px solid #F472B6;
+}
+.contenido-lectura blockquote.callout-nota::before,
+.contenido-lectura blockquote[data-callout-type="nota"]::before {
+  content: '📌 NOTA MINISTERIAL';
+  display: block;
+  font-family: var(--font-cinzel), serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #F472B6;
+  margin-bottom: 6px;
 }
 .contenido-lectura ul,
 .contenido-lectura ol {
@@ -362,13 +697,115 @@ body {
   background: rgba(201, 162, 74, 0.08);
   color: #D3E0E8;
 }
+.contenido-lectura.tema-nocturno blockquote.callout-biblia,
+.contenido-lectura.tema-nocturno blockquote[data-callout-type="biblia"] {
+  background: rgba(201, 162, 74, 0.14);
+  color: #F8F3E6;
+}
+.contenido-lectura.tema-nocturno blockquote.callout-idea,
+.contenido-lectura.tema-nocturno blockquote[data-callout-type="idea"] {
+  background: rgba(56, 189, 248, 0.12);
+  color: #E0F2FE;
+}
+.contenido-lectura.tema-nocturno blockquote.callout-aplicacion,
+.contenido-lectura.tema-nocturno blockquote[data-callout-type="aplicacion"] {
+  background: rgba(52, 211, 153, 0.12);
+  color: #ECFDF5;
+}
+.contenido-lectura.tema-nocturno blockquote.callout-nota,
+.contenido-lectura.tema-nocturno blockquote[data-callout-type="nota"] {
+  background: rgba(244, 114, 182, 0.12);
+  color: #FDF2F8;
+}
+
 .contenido-lectura.tema-diurno blockquote {
   background: #F0ECE1;
   color: #2D3E4C;
 }
+.contenido-lectura.tema-diurno blockquote.callout-biblia,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="biblia"] {
+  border-left-color: #B3861B;
+  background: #F8F3E8;
+  color: #3A2B14;
+}
+.contenido-lectura.tema-diurno blockquote.callout-biblia::before,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="biblia"]::before {
+  color: #8C6819;
+}
+.contenido-lectura.tema-diurno blockquote.callout-idea,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="idea"] {
+  border-left-color: #0284C7;
+  background: #F0F9FF;
+  color: #0C4A6E;
+}
+.contenido-lectura.tema-diurno blockquote.callout-idea::before,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="idea"]::before {
+  color: #0284C7;
+}
+.contenido-lectura.tema-diurno blockquote.callout-aplicacion,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="aplicacion"] {
+  border-left-color: #059669;
+  background: #F0FDF4;
+  color: #064E3B;
+}
+.contenido-lectura.tema-diurno blockquote.callout-aplicacion::before,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="aplicacion"]::before {
+  color: #059669;
+}
+.contenido-lectura.tema-diurno blockquote.callout-nota,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="nota"] {
+  border-left-color: #DB2777;
+  background: #FDF2F8;
+  color: #831843;
+}
+.contenido-lectura.tema-diurno blockquote.callout-nota::before,
+.contenido-lectura.tema-diurno blockquote[data-callout-type="nota"]::before {
+  color: #DB2777;
+}
+
 .contenido-lectura.tema-sepia blockquote {
   background: #EADFC8;
   color: #4A3A28;
+}
+.contenido-lectura.tema-sepia blockquote.callout-biblia,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="biblia"] {
+  border-left-color: #9C7221;
+  background: #EFE4CD;
+  color: #38250E;
+}
+.contenido-lectura.tema-sepia blockquote.callout-biblia::before,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="biblia"]::before {
+  color: #7E5718;
+}
+.contenido-lectura.tema-sepia blockquote.callout-idea,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="idea"] {
+  border-left-color: #0369A1;
+  background: #E6F1F7;
+  color: #082F49;
+}
+.contenido-lectura.tema-sepia blockquote.callout-idea::before,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="idea"]::before {
+  color: #0369A1;
+}
+.contenido-lectura.tema-sepia blockquote.callout-aplicacion,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="aplicacion"] {
+  border-left-color: #047857;
+  background: #E7F3EC;
+  color: #064E3B;
+}
+.contenido-lectura.tema-sepia blockquote.callout-aplicacion::before,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="aplicacion"]::before {
+  color: #047857;
+}
+.contenido-lectura.tema-sepia blockquote.callout-nota,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="nota"] {
+  border-left-color: #BE185D;
+  background: #F6E6EE;
+  color: #701A75;
+}
+.contenido-lectura.tema-sepia blockquote.callout-nota::before,
+.contenido-lectura.tema-sepia blockquote[data-callout-type="nota"]::before {
+  color: #BE185D;
 }
 
 /* Form inputs & buttons */

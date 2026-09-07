@@ -94,16 +94,37 @@ function htmlToMarkdown(html: string | undefined | null): string {
 
   let md = html;
 
-  // Blockquotes (antes que párrafos para no interferir)
-  md = md.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_: string, inner: string) => {
+  // Blockquotes y Callouts de Obsidian (antes que párrafos para no interferir)
+  md = md.replace(/<blockquote([^>]*)>([\s\S]*?)<\/blockquote>/gi, (_: string, attrs: string, inner: string) => {
     const text = htmlToMarkdown(inner).trim();
-    return text.split('\n').map((l: string) => `> ${l}`).join('\n') + '\n\n';
+    const isBiblia = /data-callout-type=["']biblia["']|callout-biblia/i.test(attrs);
+    const isIdea = /data-callout-type=["']idea["']|callout-idea/i.test(attrs);
+    const isAplicacion = /data-callout-type=["']aplicacion["']|callout-aplicacion/i.test(attrs);
+    const isNota = /data-callout-type=["']nota["']|callout-nota/i.test(attrs);
+
+    let header = '';
+    if (isBiblia) {
+      header = '> [!quote] Pasaje Bíblico\n';
+    } else if (isIdea) {
+      header = '> [!idea] Idea / Ilustración\n';
+    } else if (isAplicacion) {
+      header = '> [!tip] Aplicación Práctica\n';
+    } else if (isNota) {
+      header = '> [!note] Nota Ministerial\n';
+    }
+
+    const lines = text.split('\n').map((l: string) => `> ${l}`).join('\n');
+    return `${header}${lines}\n\n`;
   });
 
-  // Encabezados
+  // Línea divisoria
+  md = md.replace(/<hr\s*\/?>/gi, '\n---\n\n');
+
+  // Encabezados (H1, H2, H3, H4)
   md = md.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_: string, t: string) => `# ${stripTags(t).trim()}\n\n`);
   md = md.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_: string, t: string) => `## ${stripTags(t).trim()}\n\n`);
   md = md.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_: string, t: string) => `### ${stripTags(t).trim()}\n\n`);
+  md = md.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_: string, t: string) => `#### ${stripTags(t).trim()}\n\n`);
 
   // Listas ordenadas
   md = md.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, (_: string, inner: string) => {

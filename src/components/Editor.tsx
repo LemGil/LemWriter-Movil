@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import Underline from '@tiptap/extension-underline'
+import { CustomBlockquote, TipoNotaMinisterial } from '../utils/customBlockquote'
 import toast, { Toaster } from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { useDictado } from '../hooks/useDictado'
@@ -193,13 +196,43 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
     seccionActivaRef.current = seccionActiva
   }, [seccionActiva])
 
+  const [calloutsMenuAbierto, setCalloutsMenuAbierto] = useState(false)
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null)
+  const calloutButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!calloutsMenuAbierto) return
+
+    const handleScrollOrResize = () => {
+      setCalloutsMenuAbierto(false)
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCalloutsMenuAbierto(false)
+      }
+    }
+
+    window.addEventListener('resize', handleScrollOrResize)
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('resize', handleScrollOrResize)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [calloutsMenuAbierto])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        blockquote: false,
         heading: {
-          levels: [1, 2]
+          levels: [1, 2, 3, 4]
         }
       }),
+      Underline,
+      CustomBlockquote,
       Placeholder.configure({
         placeholder: 'Comienza a escribir tu mensaje…'
       })
@@ -1771,7 +1804,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            title="Negrita"
+            title="Negrita (Ctrl+B)"
             style={{
               padding: '6px 10px',
               borderRadius: '6px',
@@ -1790,7 +1823,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            title="Cursiva"
+            title="Cursiva (Ctrl+I)"
             style={{
               padding: '6px 10px',
               borderRadius: '6px',
@@ -1805,13 +1838,33 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
             I
           </button>
 
+          {/* Subrayado */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            title="Subrayado (Ctrl+U)"
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: editor.isActive('underline') ? 'rgba(201, 162, 74, 0.3)' : 'transparent',
+              color: editor.isActive('underline') ? '#DFBE72' : '#F5F1E8',
+              textDecoration: 'underline',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            U
+          </button>
+
           <div style={{ width: '1px', height: '18px', background: 'rgba(201, 162, 74, 0.2)', margin: '0 4px' }} />
 
           {/* H1 */}
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            title="Título Principal"
+            title="Título Principal (H1)"
             style={{
               padding: '5px 8px',
               borderRadius: '6px',
@@ -1831,7 +1884,7 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            title="Subtítulo"
+            title="Subtítulo (H2)"
             style={{
               padding: '5px 8px',
               borderRadius: '6px',
@@ -1847,25 +1900,356 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
             H2
           </button>
 
-          <div style={{ width: '1px', height: '18px', background: 'rgba(201, 162, 74, 0.2)', margin: '0 4px' }} />
-
-          {/* Cita / Blockquote */}
+          {/* H3 */}
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            title="Cita Bíblica o Frase"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            title="Encabezado Menor (H3)"
             style={{
               padding: '5px 8px',
               borderRadius: '6px',
               border: 'none',
-              background: editor.isActive('blockquote') ? 'rgba(201, 162, 74, 0.3)' : 'transparent',
-              color: editor.isActive('blockquote') ? '#DFBE72' : '#9BB0BD',
+              background: editor.isActive('heading', { level: 3 }) ? 'rgba(201, 162, 74, 0.3)' : 'transparent',
+              color: editor.isActive('heading', { level: 3 }) ? '#DFBE72' : '#9BB0BD',
+              fontFamily: "'Cinzel', serif",
               fontSize: '12px',
+              fontWeight: 600,
               cursor: 'pointer'
             }}
           >
-            &ldquo;Cita&rdquo;
+            H3
           </button>
+
+          {/* H4 */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+            title="Sección Detalle (H4)"
+            style={{
+              padding: '5px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              background: editor.isActive('heading', { level: 4 }) ? 'rgba(201, 162, 74, 0.3)' : 'transparent',
+              color: editor.isActive('heading', { level: 4 }) ? '#DFBE72' : '#9BB0BD',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            H4
+          </button>
+
+          <div style={{ width: '1px', height: '18px', background: 'rgba(201, 162, 74, 0.2)', margin: '0 4px' }} />
+
+          {/* Menú de Bloques y Callouts Ministeriales */}
+          {(() => {
+            const isBiblia = editor.isActive('blockquote', { calloutType: 'biblia' })
+            const isIdea = editor.isActive('blockquote', { calloutType: 'idea' })
+            const isAplicacion = editor.isActive('blockquote', { calloutType: 'aplicacion' })
+            const isNota = editor.isActive('blockquote', { calloutType: 'nota' })
+            const isCita = editor.isActive('blockquote') && !isBiblia && !isIdea && !isAplicacion && !isNota
+            const tieneBloqueActivo = isBiblia || isIdea || isAplicacion || isNota || isCita
+
+            const etiquetaBoton = isBiblia
+              ? '📖 Bíblico ▾'
+              : isIdea
+              ? '💡 Idea ▾'
+              : isAplicacion
+              ? '🎯 Aplicación ▾'
+              : isNota
+              ? '📌 Nota ▾'
+              : isCita
+              ? '❝ Cita ▾'
+              : 'Bloque Ministerial ▾'
+
+            const aplicarTipo = (tipo: TipoNotaMinisterial) => {
+              if (editor.isActive('blockquote', { calloutType: tipo })) {
+                editor.chain().focus().unsetBlockquote().run()
+              } else if (editor.isActive('blockquote')) {
+                editor.chain().focus().updateAttributes('blockquote', { calloutType: tipo }).run()
+              } else {
+                const ok = editor.chain().focus().wrapIn('blockquote', { calloutType: tipo }).run()
+                if (!ok) {
+                  editor.chain().focus().setBlockquote().updateAttributes('blockquote', { calloutType: tipo }).run()
+                }
+              }
+              setCalloutsMenuAbierto(false)
+            }
+
+            const aplicarCita = () => {
+              if (isCita) {
+                editor.chain().focus().unsetBlockquote().run()
+              } else if (editor.isActive('blockquote')) {
+                editor.chain().focus().updateAttributes('blockquote', { calloutType: null }).run()
+              } else {
+                editor.chain().focus().setBlockquote().run()
+              }
+              setCalloutsMenuAbierto(false)
+            }
+
+            const toggleMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation()
+              if (calloutsMenuAbierto) {
+                setCalloutsMenuAbierto(false)
+              } else {
+                const rect = e.currentTarget.getBoundingClientRect()
+                const menuWidth = 245
+                let left = rect.left
+                if (left + menuWidth > window.innerWidth - 8) {
+                  left = Math.max(8, window.innerWidth - menuWidth - 8)
+                }
+                const menuHeight = 310
+                let top = rect.bottom + 5
+                if (top + menuHeight > window.innerHeight - 8 && rect.top > menuHeight) {
+                  top = rect.top - menuHeight - 5
+                }
+                setMenuCoords({ top, left: Math.max(8, left) })
+                setCalloutsMenuAbierto(true)
+              }
+            }
+
+            return (
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <button
+                  ref={calloutButtonRef}
+                  type="button"
+                  onClick={toggleMenu}
+                  title="Bloques de Texto Ministerial (Pasaje Bíblico, Idea, Aplicación, Nota o Cita)"
+                  style={{
+                    padding: '5px 9px',
+                    borderRadius: '6px',
+                    border: tieneBloqueActivo ? '1px solid rgba(201, 162, 74, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+                    background: tieneBloqueActivo ? 'rgba(201, 162, 74, 0.28)' : 'rgba(255, 255, 255, 0.06)',
+                    color: tieneBloqueActivo ? '#DFBE72' : '#C5D4DE',
+                    fontSize: '12px',
+                    fontWeight: tieneBloqueActivo ? 600 : 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {etiquetaBoton}
+                </button>
+
+                {calloutsMenuAbierto && menuCoords && typeof document !== 'undefined' && createPortal(
+                  <>
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setCalloutsMenuAbierto(false)
+                      }}
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 99990,
+                        background: 'transparent'
+                      }}
+                    />
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'fixed',
+                        top: `${menuCoords.top}px`,
+                        left: `${menuCoords.left}px`,
+                        background: '#10242F',
+                        border: '1px solid rgba(201, 162, 74, 0.35)',
+                        borderRadius: '8px',
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.65)',
+                        padding: '6px',
+                        minWidth: '240px',
+                        zIndex: 99995,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '3px'
+                      }}
+                    >
+                      <div style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        color: '#8CA5B2',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.8px',
+                        fontWeight: 700
+                      }}>
+                        Bloques Ministeriales
+                      </div>
+
+                      {/* 📖 Pasaje Bíblico */}
+                      <button
+                        type="button"
+                        onClick={() => aplicarTipo('biblia')}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isBiblia ? 'rgba(201, 162, 74, 0.25)' : 'transparent',
+                          color: '#DFBE72',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '15px' }}>📖</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span>Pasaje Bíblico</span>
+                          <span style={{ fontSize: '10px', color: '#9BB0BD', fontWeight: 400 }}>Citas y versículos destacados</span>
+                        </div>
+                      </button>
+
+                      {/* 💡 Idea / Ilustración */}
+                      <button
+                        type="button"
+                        onClick={() => aplicarTipo('idea')}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isIdea ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                          color: '#38BDF8',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '15px' }}>💡</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span>Idea / Ilustración</span>
+                          <span style={{ fontSize: '10px', color: '#9BB0BD', fontWeight: 400 }}>Anécdotas, metáforas y bosquejos</span>
+                        </div>
+                      </button>
+
+                      {/* 🎯 Aplicación Práctica */}
+                      <button
+                        type="button"
+                        onClick={() => aplicarTipo('aplicacion')}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isAplicacion ? 'rgba(52, 211, 153, 0.2)' : 'transparent',
+                          color: '#34D399',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '15px' }}>🎯</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span>Aplicación Práctica</span>
+                          <span style={{ fontSize: '10px', color: '#9BB0BD', fontWeight: 400 }}>Reto a la congregación y llamados</span>
+                        </div>
+                      </button>
+
+                      {/* 📌 Nota Ministerial */}
+                      <button
+                        type="button"
+                        onClick={() => aplicarTipo('nota')}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isNota ? 'rgba(244, 114, 182, 0.2)' : 'transparent',
+                          color: '#F472B6',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '15px' }}>📌</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span>Nota Ministerial / Púlpito</span>
+                          <span style={{ fontSize: '10px', color: '#9BB0BD', fontWeight: 400 }}>Recordatorios de oratoria y tiempo</span>
+                        </div>
+                      </button>
+
+                      <div style={{ height: '1px', background: 'rgba(201, 162, 74, 0.15)', margin: '4px 0' }} />
+
+                      {/* ❝ Cita Clásica */}
+                      <button
+                        type="button"
+                        onClick={aplicarCita}
+                        style={{
+                          textAlign: 'left',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isCita ? 'rgba(201, 162, 74, 0.2)' : 'transparent',
+                          color: '#D3E0E8',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '15px' }}>❝</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span>Cita Tradicional</span>
+                          <span style={{ fontSize: '10px', color: '#9BB0BD', fontWeight: 400 }}>Frase de autor o cita teológica simple</span>
+                        </div>
+                      </button>
+
+                      {tieneBloqueActivo && (
+                        <>
+                          <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              editor.chain().focus().unsetBlockquote().run()
+                              setCalloutsMenuAbierto(false)
+                            }}
+                            style={{
+                              textAlign: 'left',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#E06C75',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <span>✕</span>
+                            <span>Quitar bloque (volver a párrafo normal)</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </>,
+                  document.body
+                )}
+              </div>
+            )
+          })()}
+
+          <div style={{ width: '1px', height: '18px', background: 'rgba(201, 162, 74, 0.2)', margin: '0 4px' }} />
 
           {/* Lista con viñetas */}
           <button
@@ -1882,7 +2266,43 @@ export default function Editor({ proyecto, onBack, onUpdateProyecto }: EditorPro
               cursor: 'pointer'
             }}
           >
-            • Lista
+            • Viñetas
+          </button>
+
+          {/* Lista ordenada numerada */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            title="Lista Numerada"
+            style={{
+              padding: '5px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              background: editor.isActive('orderedList') ? 'rgba(201, 162, 74, 0.3)' : 'transparent',
+              color: editor.isActive('orderedList') ? '#DFBE72' : '#9BB0BD',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            1. Numérica
+          </button>
+
+          {/* Divisor Horizontal */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            title="Línea Divisoria"
+            style={{
+              padding: '5px 8px',
+              borderRadius: '6px',
+              border: 'none',
+              background: 'transparent',
+              color: '#9BB0BD',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            ― Divisor
           </button>
 
           <div style={{ width: '1px', height: '18px', background: 'rgba(201, 162, 74, 0.2)', margin: '0 4px' }} />

@@ -287,13 +287,125 @@ export function generarHTMLMinisterial(
       page-break-inside: avoid;
     }
 
-    .seccion-contenido h1,
-    .seccion-contenido h2,
-    .seccion-contenido h3 {
+    .seccion-contenido blockquote.callout-biblia,
+    .seccion-contenido blockquote[data-callout-type="biblia"] {
+      border-left: 4px solid #C9A24A;
+      background: #FDF9EE;
+      color: #2D2416;
+      font-style: normal;
+    }
+    .seccion-contenido blockquote.callout-biblia::before,
+    .seccion-contenido blockquote[data-callout-type="biblia"]::before {
+      content: '📖 PASAJE BÍBLICO';
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #8C6D23;
+      margin-bottom: 4px;
+    }
+
+    .seccion-contenido blockquote.callout-idea,
+    .seccion-contenido blockquote[data-callout-type="idea"] {
+      border-left: 4px solid #0284C7;
+      background: #F0F9FF;
+      color: #0C4A6E;
+      font-style: normal;
+    }
+    .seccion-contenido blockquote.callout-idea::before,
+    .seccion-contenido blockquote[data-callout-type="idea"]::before {
+      content: '💡 IDEA / ILUSTRACIÓN';
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #0284C7;
+      margin-bottom: 4px;
+    }
+
+    .seccion-contenido blockquote.callout-aplicacion,
+    .seccion-contenido blockquote[data-callout-type="aplicacion"] {
+      border-left: 4px solid #059669;
+      background: #F0FDF4;
+      color: #064E3B;
+      font-style: normal;
+    }
+    .seccion-contenido blockquote.callout-aplicacion::before,
+    .seccion-contenido blockquote[data-callout-type="aplicacion"]::before {
+      content: '🎯 APLICACIÓN PRÁCTICA';
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #059669;
+      margin-bottom: 4px;
+    }
+
+    .seccion-contenido blockquote.callout-nota,
+    .seccion-contenido blockquote[data-callout-type="nota"] {
+      border-left: 4px solid #DB2777;
+      background: #FDF2F8;
+      color: #831843;
+      font-style: normal;
+    }
+    .seccion-contenido blockquote.callout-nota::before,
+    .seccion-contenido blockquote[data-callout-type="nota"]::before {
+      content: '📌 NOTA MINISTERIAL';
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #DB2777;
+      margin-bottom: 4px;
+    }
+
+    .seccion-contenido h1 {
       font-family: 'Cinzel', serif;
       color: #10242F;
+      font-size: 20px;
       margin: 18px 0 8px 0;
       page-break-after: avoid;
+    }
+
+    .seccion-contenido h2 {
+      font-family: 'Cinzel', serif;
+      color: #1E3D4F;
+      font-size: 17px;
+      margin: 16px 0 6px 0;
+      page-break-after: avoid;
+    }
+
+    .seccion-contenido h3 {
+      font-family: 'Cinzel', serif;
+      color: #8C6D23;
+      font-size: 15px;
+      margin: 14px 0 6px 0;
+      page-break-after: avoid;
+    }
+
+    .seccion-contenido h4 {
+      font-family: 'Cinzel', serif;
+      color: #4A5568;
+      font-size: 13px;
+      font-weight: 600;
+      margin: 12px 0 4px 0;
+      page-break-after: avoid;
+    }
+
+    .seccion-contenido hr {
+      border: none;
+      border-top: 1px solid #DFBE72;
+      margin: 16px 0;
+    }
+
+    .seccion-contenido u {
+      text-decoration: underline;
+      text-decoration-color: #C9A24A;
+      text-underline-offset: 2px;
     }
 
     .seccion-contenido ul, 
