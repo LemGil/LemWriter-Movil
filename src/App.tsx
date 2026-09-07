@@ -102,9 +102,13 @@ export default function App() {
           fontSize: '26px',
           fontWeight: 700,
           letterSpacing: '1px',
-          marginBottom: '6px'
+          marginBottom: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
         }}>
-          LemWriter
+          LemWriter <span style={{ fontSize: '12px', fontWeight: 600, color: '#DFBE72', background: 'rgba(201, 162, 74, 0.15)', border: '1px solid rgba(201, 162, 74, 0.4)', padding: '2px 7px', borderRadius: '5px', fontFamily: "'Inter', sans-serif" }}>v1.1</span>
         </h1>
         <p style={{
           color: '#9BB0BD',
@@ -217,22 +221,38 @@ export default function App() {
             }}
           />
           <div>
-            <span style={{
-              color: '#C9A24A',
-              fontFamily: "'Cinzel', Georgia, serif",
-              fontSize: '18px',
-              fontWeight: 700,
-              letterSpacing: '0.8px',
-              display: 'block',
-              lineHeight: 1.1
-            }}>
-              LemWriter
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{
+                color: '#C9A24A',
+                fontFamily: "'Cinzel', Georgia, serif",
+                fontSize: '18px',
+                fontWeight: 700,
+                letterSpacing: '0.8px',
+                lineHeight: 1.1
+              }}>
+                LemWriter
+              </span>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#DFBE72',
+                background: 'rgba(201, 162, 74, 0.15)',
+                border: '1px solid rgba(201, 162, 74, 0.4)',
+                padding: '1px 5px',
+                borderRadius: '4px',
+                fontFamily: "'Inter', sans-serif",
+                letterSpacing: '0.3px',
+                lineHeight: '1.2'
+              }}>
+                v1.1
+              </span>
+            </div>
             <span style={{
               color: '#8E9EA7',
               fontSize: '11px',
               fontFamily: "'Inter', sans-serif",
-              letterSpacing: '0.3px'
+              letterSpacing: '0.3px',
+              display: 'block'
             }}>
               {isGuest ? 'Modo Fuera de Línea' : 'Ministerio LemGil'}
             </span>

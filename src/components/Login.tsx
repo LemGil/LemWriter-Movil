@@ -100,9 +100,13 @@ export default function Login({ onLogin }: LoginProps) {
             fontSize: '24px',
             fontWeight: 700,
             letterSpacing: '1.2px',
-            margin: '0 0 4px 0'
+            margin: '0 0 4px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
           }}>
-            LemWriter
+            LemWriter <span style={{ fontSize: '11px', fontWeight: 600, color: '#DFBE72', background: 'rgba(201, 162, 74, 0.15)', border: '1px solid rgba(201, 162, 74, 0.4)', padding: '2px 6px', borderRadius: '4px', fontFamily: "'Inter', sans-serif" }}>v1.1</span>
           </h1>
           <p style={{
             color: '#9BB0BD',

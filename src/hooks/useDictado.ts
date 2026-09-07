@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { Capacitor } from '@capacitor/core';
 
 export function useDictado(
   onResult: (text: string) => void,
@@ -20,8 +21,10 @@ export function useDictado(
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<any>(null);
-  const webSpeechResultadosRef = useRef<string[]>([]);
   const modoActualRef = useRef<'dictado' | 'extendido'>('dictado');
+  const activeNativeRef = useRef<boolean>(false);
+  const dictandoActivoRef = useRef<boolean>(false);
+  const interimTranscriptRef = useRef<string>('');
 
   const onResultRef = useRef(onResult);
   const onStopRef = useRef(onStop);
@@ -55,6 +58,17 @@ export function useDictado(
 
   // Detener todos los recursos de audio y animación
   const liberarRecursos = useCallback(() => {
+    dictandoActivoRef.current = false;
+    interimTranscriptRef.current = '';
+
+    if (Capacitor.isNativePlatform()) {
+      activeNativeRef.current = false;
+      import('@capacitor-community/speech-recognition').then(({ SpeechRecognition }) => {
+        SpeechRecognition.stop().catch(() => {});
+        SpeechRecognition.removeAllListeners().catch(() => {});
+      }).catch(() => {});
+    }
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
@@ -83,7 +97,10 @@ export function useDictado(
 
     if (speechRecognitionRef.current) {
       try {
-        speechRecognitionRef.current.abort();
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.onerror = null;
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.stop();
       } catch (e) {}
       speechRecognitionRef.current = null;
     }
@@ -118,10 +135,91 @@ export function useDictado(
     return '';
   };
 
-  // Iniciar grabación real de micrófono con fallback a Web Speech y Gemini
-  const iniciarGrabacion = async (esExtendido: boolean) => {
-    modoActualRef.current = esExtendido ? 'extendido' : 'dictado';
-    webSpeechResultadosRef.current = [];
+  // Iniciar reconocimiento de voz Web Speech API (Dictado directo sin Gemini)
+  const iniciarWebSpeechDictado = () => {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) return false;
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'es-MX';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+
+      interimTranscriptRef.current = '';
+
+      rec.onresult = (e: any) => {
+        let textoFinal = '';
+        let textoInterim = '';
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const trans = e.results[i][0]?.transcript || '';
+          if (e.results[i].isFinal) {
+            textoFinal += trans + ' ';
+          } else {
+            textoInterim += trans;
+          }
+        }
+
+        if (textoFinal.trim()) {
+          onResultRef.current?.(textoFinal.trim());
+          interimTranscriptRef.current = '';
+          setAudioLevel(75);
+          setTimeout(() => setAudioLevel(20), 300);
+        } else if (textoInterim.trim()) {
+          interimTranscriptRef.current = textoInterim.trim();
+          setAudioLevel(55);
+        }
+      };
+
+      rec.onerror = (e: any) => {
+        console.warn('Web Speech API aviso:', e?.error);
+        if (e.error === 'not-allowed') {
+          toast.error('Acceso al micrófono denegado en el navegador.');
+          detenerGrabacion();
+        } else if (e.error !== 'no-speech') {
+          console.error('Error Web Speech:', e.error);
+        }
+      };
+
+      rec.onend = () => {
+        // Si el usuario aún no detuvo el dictado manualmente, reconectar
+        if (dictandoActivoRef.current && modoActualRef.current === 'dictado') {
+          try {
+            rec.start();
+          } catch {
+            // Ya iniciado o detenido
+          }
+        }
+      };
+
+      rec.start();
+      speechRecognitionRef.current = rec;
+      dictandoActivoRef.current = true;
+      setDictando(true);
+      setModoExtendido(false);
+      setTiempoGrabacion(0);
+
+      // Temporizador de visualización
+      timerIntervalRef.current = setInterval(() => {
+        setTiempoGrabacion((prev) => prev + 1);
+      }, 1000);
+
+      toast('🎙️ Dictado en vivo iniciado. Habla cerca del micrófono.', {
+        icon: '🎤',
+        duration: 3000
+      });
+
+      return true;
+    } catch (err) {
+      console.warn('No se pudo inicializar Web Speech API:', err);
+      return false;
+    }
+  };
+
+  // Iniciar grabación física con MediaRecorder (Sermón Extendido o fallback sin Web Speech)
+  const iniciarGrabacionMediaRecorder = async (esExtendido: boolean) => {
     audioChunksRef.current = [];
 
     // 1. Solicitar acceso al micrófono
@@ -207,18 +305,8 @@ export function useDictado(
     recorder.onstop = async () => {
       const modo = modoActualRef.current;
       const chunks = audioChunksRef.current;
-      const tuvoTranscripcionEnVivo = webSpeechResultadosRef.current.length > 0;
 
       liberarRecursos();
-
-      // Si fue dictado corto y ya se transcribió en vivo mediante Web Speech API
-      if (modo === 'dictado' && tuvoTranscripcionEnVivo) {
-        setDictando(false);
-        setModoExtendido(false);
-        onStopRef.current?.();
-        toast.success('Dictado completado');
-        return;
-      }
 
       // Si no hay datos grabados suficientes
       if (chunks.length === 0) {
@@ -290,44 +378,10 @@ export function useDictado(
       }
     };
 
-    // 4. Iniciar SpeechRecognition como motor complementario de tiempo real en dictado
-    if (!esExtendido) {
-      try {
-        const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRec) {
-          const rec = new SpeechRec();
-          rec.lang = 'es-MX';
-          rec.continuous = true;
-          rec.interimResults = false;
-
-          rec.onresult = (e: any) => {
-            let palabras = '';
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-              if (e.results[i].isFinal) {
-                palabras += e.results[i][0].transcript + ' ';
-              }
-            }
-            if (palabras.trim()) {
-              webSpeechResultadosRef.current.push(palabras.trim());
-              onResultRef.current?.(palabras.trim());
-            }
-          };
-
-          rec.onerror = (e: any) => {
-            console.warn('SpeechRecognition aviso (gestionado por grabador de audio Gemini):', e?.error);
-          };
-
-          rec.start();
-          speechRecognitionRef.current = rec;
-        }
-      } catch (e) {
-        console.warn('SpeechRecognition no se pudo activar:', e);
-      }
-    }
-
     // Iniciar captura en trozos cada 1 segundo para asegurar datos
     try {
       recorder.start(1000);
+      dictandoActivoRef.current = true;
       setDictando(true);
       setModoExtendido(esExtendido);
       setTiempoGrabacion(0);
@@ -340,7 +394,7 @@ export function useDictado(
       toast(
         esExtendido
           ? '🎙️ Grabando sermón continuo... Pulsa Detener al finalizar.'
-          : '🎙️ Dictado en vivo iniciado. Habla cerca del micrófono.',
+          : '🎙️ Grabador de audio iniciado.',
         { icon: '🎤', duration: 3000 }
       );
     } catch (err: any) {
@@ -352,18 +406,146 @@ export function useDictado(
     }
   };
 
-  // Detener la grabación activa
-  const detenerGrabacion = () => {
-    if (speechRecognitionRef.current) {
+  // Iniciar grabación general
+  const iniciarGrabacion = async (esExtendido: boolean) => {
+    modoActualRef.current = esExtendido ? 'extendido' : 'dictado';
+
+    // ── 1. Manejo nativo para Capacitor (Android APK) ─────────────────────────
+    if (Capacitor.isNativePlatform()) {
       try {
-        speechRecognitionRef.current.stop();
-      } catch (e) {}
+        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+        const perm = await SpeechRecognition.requestPermissions();
+        if (perm.speechRecognition !== 'granted') {
+          toast.error('Permiso de micrófono denegado en LemWriter');
+          setDictando(false);
+          setModoExtendido(false);
+          return;
+        }
+
+        activeNativeRef.current = true;
+        dictandoActivoRef.current = true;
+        setDictando(true);
+        setModoExtendido(esExtendido);
+        setTiempoGrabacion(0);
+
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = setInterval(() => {
+          setTiempoGrabacion((prev) => prev + 1);
+          setAudioLevel(Math.floor(40 + Math.random() * 50));
+        }, 1000);
+
+        toast(
+          esExtendido
+            ? '🎙️ Grabando sermón continuo... Pulsa Extendido para detener.'
+            : '🎙️ Dictado nativo iniciado. Habla cerca del micrófono.',
+          { icon: '🎤', duration: 3000 }
+        );
+
+        let previousMatch = '';
+        const runNativeSession = async () => {
+          if (!activeNativeRef.current) return;
+          try {
+            await SpeechRecognition.start({ language: 'es-MX', partialResults: true, popup: false });
+          } catch (err) {
+            console.warn('Error iniciando SpeechRecognition nativo:', err);
+          }
+        };
+
+        try {
+          await SpeechRecognition.removeAllListeners();
+        } catch {}
+
+        SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
+          const currentMatch = data.matches?.[0] ?? '';
+          if (currentMatch && currentMatch !== previousMatch) {
+            const delta = currentMatch.startsWith(previousMatch)
+              ? currentMatch.slice(previousMatch.length).trim()
+              : currentMatch.trim();
+            if (delta) {
+              onResultRef.current?.(delta);
+            }
+            previousMatch = currentMatch;
+          }
+        });
+
+        SpeechRecognition.addListener('listeningState', async (data: { status: string }) => {
+          if (data.status === 'stopped') {
+            if (modoActualRef.current === 'extendido' && activeNativeRef.current) {
+              previousMatch = '';
+              await new Promise((r) => setTimeout(r, 300));
+              if (activeNativeRef.current) {
+                runNativeSession();
+              }
+            } else if (!activeNativeRef.current) {
+              detenerGrabacion();
+            }
+          }
+        });
+
+        await runNativeSession();
+        return;
+      } catch (err: any) {
+        console.error('Error al inicializar SpeechRecognition nativo:', err);
+        toast.error('Error al iniciar dictado nativo');
+        setDictando(false);
+        setModoExtendido(false);
+        return;
+      }
     }
 
+    // ── 2. Modo Dictado en Web (Web Speech API en vivo y directo) ─────────────
+    if (!esExtendido) {
+      const iniciado = iniciarWebSpeechDictado();
+      if (iniciado) {
+        return; // Éxito con Web Speech API directa
+      }
+      // Si el navegador no soporta Web Speech API (ej. Firefox), continúa abajo con fallback MediaRecorder
+    }
+
+    // ── 3. Modo Extendido en Web (o Fallback sin Web Speech API) ─────────────
+    await iniciarGrabacionMediaRecorder(esExtendido);
+  };
+
+  // Detener la grabación activa
+  const detenerGrabacion = () => {
+    dictandoActivoRef.current = false;
+
+    // En Capacitor Android
+    if (Capacitor.isNativePlatform()) {
+      activeNativeRef.current = false;
+      import('@capacitor-community/speech-recognition').then(({ SpeechRecognition }) => {
+        SpeechRecognition.stop().catch(() => {});
+        SpeechRecognition.removeAllListeners().catch(() => {});
+      }).catch(() => {});
+      liberarRecursos();
+      setDictando(false);
+      setModoExtendido(false);
+      onStopRef.current?.();
+      toast.success('Dictado completado');
+      return;
+    }
+
+    // En Web: Si estábamos en modo Dictado directo con Web Speech API
+    if (modoActualRef.current === 'dictado' && speechRecognitionRef.current) {
+      // Si había algún fragmento parcial pendiente, insertarlo antes de cerrar
+      if (interimTranscriptRef.current.trim()) {
+        onResultRef.current?.(interimTranscriptRef.current.trim());
+        interimTranscriptRef.current = '';
+      }
+
+      liberarRecursos();
+      setDictando(false);
+      setModoExtendido(false);
+      onStopRef.current?.();
+      toast.success('Dictado completado');
+      return;
+    }
+
+    // En Web: Si estábamos grabando audio continuo con MediaRecorder (Modo Extendido)
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();
-      } catch (e) {
+      } catch {
         liberarRecursos();
         setDictando(false);
         setModoExtendido(false);
