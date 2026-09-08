@@ -423,6 +423,8 @@ export function useDictado(
 
   // Iniciar grabación general
   const iniciarGrabacion = async (esExtendido: boolean) => {
+    console.log('[LemWriter] isNativePlatform:', Capacitor.isNativePlatform());
+    console.log('[LemWriter] platform:', Capacitor.getPlatform());
     modoActualRef.current = esExtendido ? 'extendido' : 'dictado';
 
     // ── 1. Manejo nativo para Capacitor (Android APK) ─────────────────────────
